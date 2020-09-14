@@ -1,0 +1,53 @@
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" width="288" height="48">
+    <!-- Background -->
+    <rect fill="solid" stroke="black" width="100%" height="100%"/>
+    <!-- Lines -->
+    <g fill="none" stroke="white" stroke-linecap="butt" stroke-linejoin="bevel" stroke-width="0.5">
+        <!-- Guides -->
+        <!--
+            <polyline points="24,0 24,48" />
+            <polyline points="72,0 72,48" />
+            <polyline points="120,0 120,48" />
+            <polyline points="168,0 168,48" />
+            <polyline points="216,0 216,48" />
+            <polyline points="264,0 264,48" />
+        -->
+        <!-- S -->
+        <polyline points="60,6 36,18 60,30 36,42" />
+        <!-- P -->
+        <polyline points="84,42 84,6 108,15 84,24" />
+        <!-- A -->
+        <polyline points="132,42 143,6 154,42" />
+        <!-- C -->
+        <polyline points="204,6 180,24 204,42" />
+        <!-- E -->
+        <polyline points="252,6 228,24 252,24 228,24 252,42" />
+    </g>
+    <!-- Dots -->
+    <g fill="white">
+        <!-- S -->
+        <circle cx="60" cy="6" r="1" />
+        <circle cx="36" cy="18" r="1" />
+        <circle cx="60" cy="30" r="1" />
+        <circle cx="36" cy="42" r="1" />
+        <!-- P -->
+        <circle cx="84" cy="42" r="1" />
+        <circle cx="84" cy="6" r="1" />
+        <circle cx="108" cy="15" r="1" />
+        <circle cx="84" cy="24" r="1" />
+        <!-- A -->
+        <circle cx="132" cy="42" r="1" />
+        <circle cx="143" cy="6" r="1" />
+        <circle cx="154" cy="42" r="1" />
+        <!-- C -->
+        <circle cx="204" cy="6" r="1" />
+        <circle cx="180" cy="24" r="1" />
+        <circle cx="204" cy="42" r="1" />
+        <!-- E -->
+        <circle cx="252" cy="6" r="1" />
+        <circle cx="228" cy="24" r="1" />
+        <circle cx="252" cy="24" r="1" />
+        <circle cx="252" cy="42" r="1" />
+    </g>
+</svg>

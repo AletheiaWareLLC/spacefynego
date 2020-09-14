@@ -25,28 +25,34 @@ import (
 	"fyne.io/fyne/widget"
 	"github.com/AletheiaWareLLC/bcclientgo"
 	"github.com/AletheiaWareLLC/bcfynego"
+	bcuidata "github.com/AletheiaWareLLC/bcfynego/ui/data"
+	"github.com/AletheiaWareLLC/spaceclientgo"
 	"github.com/AletheiaWareLLC/spacefynego"
 	"github.com/AletheiaWareLLC/spacefynego/ui/data"
 	"log"
 )
 
 func main() {
-	// Create application
+	// Create Application
 	a := app.New()
 
-	// Create window
+	// Create Window
 	w := a.NewWindow("S P A C E")
 	w.SetMaster()
 
-	// Create Client
-	c := &spacefynego.SpaceClient{
-		BCFyneClient: bcfynego.BCFyneClient{
-			BCClient: bcclientgo.BCClient{
-				Peers: []string{
-					// TODO bcgo.GetBCHost(),         // Add BC host as peer
-					// TODO spacego.GetSpaceHost(), // Add SPACE host as peer
-				},
+	// Create Space Client
+	c := &spaceclientgo.SpaceClient{
+		BCClient: bcclientgo.BCClient{
+			Peers: []string{
+				// TODO bcgo.GetBCHost(),         // Add BC host as peer
+				// TODO spacego.GetSpaceHost(), // Add SPACE host as peer
 			},
+		},
+	}
+
+	// Create Space Fyne
+	f := &spacefynego.SpaceFyne{
+		BCFyne: bcfynego.BCFyne{
 			App:    a,
 			Window: w,
 		},
@@ -58,7 +64,7 @@ func main() {
 	// Create a scrollable list of files
 	fileBox := widget.NewVBox()
 	refreshList := func() {
-		fileBox.Children = c.FileList()
+		fileBox.Children = f.FileList(c)
 		// Trigger list redraw
 		fileBox.Refresh()
 	}
@@ -67,13 +73,13 @@ func main() {
 
 	toolbar := widget.NewToolbar(
 		widget.NewToolbarAction(theme.ContentAddIcon(), func() {
-			log.Println("Create File")
-			go c.NewFile()
+			log.Println("TODO Create File")
+			// TODO go f.NewFile(c)
 		}),
 		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(theme.SearchIcon(), func() {
-			log.Println("Search File")
-			go c.SearchFile()
+			log.Println("TODO Search File")
+			// TODO go f.SearchFile(c)
 		}),
 		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(theme.ViewRefreshIcon(), func() {
@@ -81,9 +87,9 @@ func main() {
 			go refreshList()
 		}),
 		widget.NewToolbarSpacer(),
-		widget.NewToolbarAction(data.NewPrimaryThemedResource(data.AccountIcon), func() {
+		widget.NewToolbarAction(bcuidata.NewPrimaryThemedResource(bcuidata.AccountIcon), func() {
 			log.Println("Account Info")
-			go c.ShowNode()
+			go f.ShowNode(&c.BCClient)
 		}),
 		widget.NewToolbarAction(theme.HelpIcon(), func() {
 			log.Println("TODO Display Help")

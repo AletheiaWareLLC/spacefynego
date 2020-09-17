@@ -26,9 +26,11 @@ import (
 	"github.com/AletheiaWareLLC/bcclientgo"
 	"github.com/AletheiaWareLLC/bcfynego"
 	bcuidata "github.com/AletheiaWareLLC/bcfynego/ui/data"
+	"github.com/AletheiaWareLLC/bcgo"
 	"github.com/AletheiaWareLLC/spaceclientgo"
 	"github.com/AletheiaWareLLC/spacefynego"
 	"github.com/AletheiaWareLLC/spacefynego/ui/data"
+	"github.com/AletheiaWareLLC/spacego"
 	"log"
 )
 
@@ -40,13 +42,15 @@ func main() {
 	w := a.NewWindow("S P A C E")
 	w.SetMaster()
 
+	peers := append(
+		spacego.GetSpaceHosts(), // Add SPACE host as peer
+		bcgo.GetBCHost(),        // Add BC host as peer
+	)
+
 	// Create Space Client
 	c := &spaceclientgo.SpaceClient{
 		BCClient: bcclientgo.BCClient{
-			Peers: []string{
-				// TODO bcgo.GetBCHost(),         // Add BC host as peer
-				// TODO spacego.GetSpaceHost(), // Add SPACE host as peer
-			},
+			Peers: peers,
 		},
 	}
 
@@ -62,19 +66,16 @@ func main() {
 	space.FillMode = canvas.ImageFillContain
 
 	// Create a scrollable list of files
-	fileBox := widget.NewVBox()
-	refreshList := func() {
-		fileBox.Children = f.FileList(c)
-		// Trigger list redraw
-		fileBox.Refresh()
-	}
-	go refreshList()
-	fileList := widget.NewScrollContainer(fileBox)
+	fileList := f.NewList(c)
 
 	toolbar := widget.NewToolbar(
-		widget.NewToolbarAction(theme.ContentAddIcon(), func() {
+		widget.NewToolbarAction(theme.DocumentCreateIcon(), func() {
 			log.Println("TODO Create File")
-			// TODO go f.NewFile(c)
+			go f.NewFile(c)
+		}),
+		widget.NewToolbarAction(theme.ContentAddIcon(), func() {
+			log.Println("Upload File")
+			go f.UploadFile(c)
 		}),
 		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(theme.SearchIcon(), func() {
@@ -84,7 +85,18 @@ func main() {
 		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(theme.ViewRefreshIcon(), func() {
 			log.Println("Refresh List")
-			go refreshList()
+			go func() {
+				node, err := f.GetNode(&c.BCClient)
+				if err != nil {
+					f.ShowError(err)
+					return
+				}
+				if err := c.List(node, fileList.Update); err != nil {
+					f.ShowError(err)
+					return
+				}
+				fileList.Refresh()
+			}()
 		}),
 		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(bcuidata.NewPrimaryThemedResource(bcuidata.AccountIcon), func() {

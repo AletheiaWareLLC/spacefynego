@@ -17,6 +17,8 @@
 package spacefynego
 
 import (
+	"bytes"
+	"encoding/base64"
 	"fmt"
 	"fyne.io/fyne"
 	"fyne.io/fyne/dialog"
@@ -26,6 +28,7 @@ import (
 	"github.com/AletheiaWareLLC/spaceclientgo"
 	"github.com/AletheiaWareLLC/spacefynego/ui"
 	"github.com/AletheiaWareLLC/spacego"
+	"log"
 )
 
 type SpaceFyne struct {
@@ -106,14 +109,49 @@ func (f *SpaceFyne) UploadFile(client *spaceclientgo.SpaceClient) {
 // Get file shared to key with given hash
 // - SpaceClient.GetShared(node *bcgo.Node, recordHash []byte, writer io.Writer) (uint64, error)
 func (f *SpaceFyne) ShowFile(client *spaceclientgo.SpaceClient, id string, meta *spacego.Meta) {
-	f.ShowError(fmt.Errorf("Not yet implemented: %s", "SpaceFyne.ShowFile"))
-	/* TODO
 	node, err := f.GetNode(&client.BCClient)
 	if err != nil {
 		f.ShowError(err)
 		return
 	}
-	*/
+	switch meta.Type {
+	case spacego.MIME_TYPE_TEXT_PLAIN:
+		// Create label to hold text
+		label := &widget.Label{
+			Wrapping: fyne.TextWrapWord,
+		}
+		// Create goroutine to load file contents and update label
+		go func() {
+			hash, err := base64.RawURLEncoding.DecodeString(id)
+			if err != nil {
+				f.ShowError(err)
+				return
+			}
+			var buffer bytes.Buffer
+			count, err := client.Get(node, hash, &buffer)
+			if err != nil {
+				f.ShowError(err)
+				return
+			}
+			log.Println("Count:", count)
+			if count > 0 {
+				label.SetText(buffer.String())
+			}
+		}()
+
+		// Create and show window containing label
+		title := meta.Name
+		if title == "" {
+			title = "(untitled)"
+		}
+		window := f.App.NewWindow(title)
+		window.SetContent(widget.NewVScrollContainer(label))
+		window.Resize(fyne.NewSize(800, 600))
+		window.CenterOnScreen()
+		window.Show()
+	default:
+		f.ShowError(fmt.Errorf("Not yet implemented: %s %s", "SpaceFyne.ShowFile", meta.Type))
+	}
 }
 
 // List files owned by key
@@ -144,7 +182,7 @@ func (f *SpaceFyne) ShowNewFileDialog(callback func(string, string)) {
 			}
 			m := mime.Text
 			if m == "" {
-				m = "text/plain"
+				m = spacego.MIME_TYPE_TEXT_PLAIN
 			}
 			callback(n, m)
 		}

@@ -17,46 +17,166 @@
 package spacefynego
 
 import (
-	"bytes"
 	"encoding/base64"
 	"fmt"
 	"fyne.io/fyne"
+	"fyne.io/fyne/canvas"
+	"fyne.io/fyne/container"
 	"fyne.io/fyne/dialog"
+	"fyne.io/fyne/theme"
 	"fyne.io/fyne/widget"
 	"github.com/AletheiaWareLLC/bcfynego"
 	bcui "github.com/AletheiaWareLLC/bcfynego/ui"
+	"github.com/AletheiaWareLLC/bcgo"
 	"github.com/AletheiaWareLLC/spaceclientgo"
 	"github.com/AletheiaWareLLC/spacefynego/ui"
+	"github.com/AletheiaWareLLC/spacefynego/ui/data"
+	"github.com/AletheiaWareLLC/spacefynego/ui/viewer"
 	"github.com/AletheiaWareLLC/spacego"
-	"log"
+	"io"
+	"net/url"
 )
 
 type SpaceFyne struct {
 	bcfynego.BCFyne
 }
 
-// Adds file
-// - SpaceClient.Add(node *bcgo.Node, listener bcgo.MiningListener, name, mime string, reader io.Reader) (*bcgo.Reference, error)
-// Adds file using Remote Mining Service
-// - SpaceClient.AddRemote(node *bcgo.Node, domain, name, mime string, reader io.Reader) (*bcgo.Reference, error)
+func NewSpaceFyne(a fyne.App, w fyne.Window, c *spaceclientgo.SpaceClient) *SpaceFyne {
+	f := &SpaceFyne{
+		BCFyne: *bcfynego.NewBCFyne(a, w),
+	}
+	f.OnKeysImported = func(alias string) {
+		// TODO show success dialog, and tell the user to sign in with their newly-imported alias, and password
+	}
+	f.OnSignedUp = func(node *bcgo.Node) {
+		f.ShowWelcome(c, node)
+	}
+	return f
+}
 
-// NewFile displays a dialog (name & mime), and adds the resulting file.
-func (f *SpaceFyne) NewFile(client *spaceclientgo.SpaceClient) {
-	f.ShowError(fmt.Errorf("Not yet implemented: %s", "SpaceFyne.NewFile"))
-	/* TODO
-	f.ShowNewFileDialog(func(name, mime string) {
+// ShowWelcome displays a wizard to welcome a new user and walk them through the setup process.
+func (f *SpaceFyne) ShowWelcome(client *spaceclientgo.SpaceClient, node *bcgo.Node) {
+	if f.Dialog != nil {
+		f.Dialog.Hide()
+	}
+	l := ui.NewRegistrarList(func(id string, timestamp uint64, registrar *spacego.Registrar) {
+		u, err := url.Parse(fmt.Sprintf("https://%s/%s", registrar.Merchant.Domain, registrar.Merchant.RegisterUrl))
+		if err != nil {
+			f.ShowError(err)
+			return
+		}
+		params := url.Values{}
+		params.Add("alias", node.Alias)
+		params.Add("next", registrar.Service.SubscribeUrl)
+		u.RawQuery = params.Encode()
+		if err := f.App.OpenURL(u); err != nil {
+			f.ShowError(err)
+			return
+		}
+	})
+	go l.Update(client, node)
+	f.Dialog = dialog.NewCustom("Welcome", "OK",
+		container.NewGridWithRows(3,
+			widget.NewLabel(fmt.Sprintf("Hello %s, welcome to S P A C E", node.Alias)),
+			widget.NewLabel("Your encrypted data will be stored by your choice of storage providers.\nChoose at least two providers from the list below;"),
+			l,
+		),
+		f.Window)
+	f.Dialog.Resize(fyne.NewSize(0, 300))
+	f.Dialog.Show()
+}
+
+func (f *SpaceFyne) GetIcon() fyne.CanvasObject {
+	icon := canvas.NewImageFromResource(data.SpaceIcon)
+	icon.FillMode = canvas.ImageFillContain
+	return icon
+}
+
+// AddFile displays a dialog (write text, take a picture, upload an existing file), and adds the result.
+func (f *SpaceFyne) AddFile(client *spaceclientgo.SpaceClient) {
+	composeText := widget.NewButtonWithIcon("Text", theme.DocumentCreateIcon(), func() {
+		if f.Dialog != nil {
+			f.Dialog.Hide()
+		}
+		// TODO
+		f.ShowError(fmt.Errorf("Not yet implemented: %s %s", "SpaceFyne.AddFile", "Text"))
+	})
+	captureImage := widget.NewButtonWithIcon("Image", theme.NewThemedResource(data.CameraPhotoIcon, nil), func() {
+		if f.Dialog != nil {
+			f.Dialog.Hide()
+		}
+		// TODO
+		f.ShowError(fmt.Errorf("Not yet implemented: %s %s", "SpaceFyne.AddFile", "Image"))
+	})
+	captureVideo := widget.NewButtonWithIcon("Video", theme.NewThemedResource(data.CameraVideoIcon, nil), func() {
+		if f.Dialog != nil {
+			f.Dialog.Hide()
+		}
+		// TODO
+		f.ShowError(fmt.Errorf("Not yet implemented: %s %s", "SpaceFyne.AddFile", "Video"))
+	})
+	captureAudio := widget.NewButtonWithIcon("Audio", theme.NewThemedResource(data.MicrophoneIcon, nil), func() {
+		if f.Dialog != nil {
+			f.Dialog.Hide()
+		}
+		// TODO
+		f.ShowError(fmt.Errorf("Not yet implemented: %s %s", "SpaceFyne.AddFile", "Audio"))
+	})
+	uploadFile := widget.NewButtonWithIcon("Document", theme.FileIcon(), func() {
+		if f.Dialog != nil {
+			f.Dialog.Hide()
+		}
+		go f.UploadFile(client)
+	})
+	content := container.NewAdaptiveGrid(3,
+		composeText,
+		captureImage,
+		captureAudio,
+		captureVideo,
+		uploadFile,
+	)
+	if f.Dialog != nil {
+		f.Dialog.Hide()
+	}
+	f.Dialog = dialog.NewCustom("Add File", "Cancel", content, f.Window)
+	f.Dialog.Show()
+
+	/*
 		node, err := f.GetNode(&client.BCClient)
 		if err != nil {
 			f.ShowError(err)
 			return
 		}
-		editor := f.Editor(mime)
-		f.ShowConfirmDialog(editor, func(result bool) {
-			if result {
-				client.Add(node, client.Listener, name, mime, reader)
+	*/
+
+	/*
+		edit := viewer.GetEditor(meta, func(writer io.Writer) uint64 {
+			hash, err := base64.RawURLEncoding.DecodeString(id)
+			if err != nil {
+				f.ShowError(err)
+				return 0
 			}
+			count, err := client.Get(node, hash, writer)
+			if err != nil {
+				f.ShowError(err)
+				return 0
+			}
+			return count
 		})
-	})
+
+		if edit == nil {
+			f.ShowError(fmt.Errorf("Not yet implemented: %s %s", "SpaceFyne.NewFile", mime))
+			return
+		}
+
+		if name == "" {
+			name = "(untitled)"
+		}
+		window := f.App.NewWindow(name)
+		window.SetContent(edit)
+		window.Resize(fyne.NewSize(800, 600))
+		window.CenterOnScreen()
+		window.Show()
 	*/
 }
 
@@ -67,6 +187,8 @@ func (f *SpaceFyne) UploadFile(client *spaceclientgo.SpaceClient) {
 		f.ShowError(err)
 		return
 	}
+
+	// TODO ensure alias has chosen providers, and those providers are added to node.Network.Peers
 
 	if f.Dialog != nil {
 		f.Dialog.Hide()
@@ -96,129 +218,85 @@ func (f *SpaceFyne) UploadFile(client *spaceclientgo.SpaceClient) {
 	f.Dialog.Show()
 }
 
-// Show file owned by key with given hash
-// - SpaceClient.Show(node *bcgo.Node, recordHash []byte, callback MetaCallback) error
-// Show file shared to key with given hash
-// - SpaceClient.ShowShared(node *bcgo.Node, recordHash []byte, callback MetaCallback) error
-// Show all files owned by key with given mime-type
-// - SpaceClient.ShowAll(node *bcgo.Node, mime string, callback MetaCallback) error
-// Show all files shared to key with given mime-type
-// - SpaceClient.ShowAllShared(node *bcgo.Node, mime string, callback MetaCallback) error
-// Get file by given hash
-// - SpaceClient.Get(node *bcgo.Node, recordHash []byte, writer io.Writer) (uint64, error)
-// Get file shared to key with given hash
-// - SpaceClient.GetShared(node *bcgo.Node, recordHash []byte, writer io.Writer) (uint64, error)
-func (f *SpaceFyne) ShowFile(client *spaceclientgo.SpaceClient, id string, meta *spacego.Meta) {
+func (f *SpaceFyne) SearchFile(client *spaceclientgo.SpaceClient) {
+	f.ShowError(fmt.Errorf("Not yet implemented: %s", "SpaceFyne.SearchFile"))
+}
+
+func (f *SpaceFyne) ShowFile(client *spaceclientgo.SpaceClient, id string, timestamp uint64, meta *spacego.Meta) {
 	node, err := f.GetNode(&client.BCClient)
 	if err != nil {
 		f.ShowError(err)
 		return
 	}
-	switch meta.Type {
-	case spacego.MIME_TYPE_TEXT_PLAIN:
-		// Create label to hold text
-		label := &widget.Label{
-			Wrapping: fyne.TextWrapWord,
-		}
-		// Create goroutine to load file contents and update label
-		go func() {
-			hash, err := base64.RawURLEncoding.DecodeString(id)
-			if err != nil {
-				f.ShowError(err)
-				return
-			}
-			var buffer bytes.Buffer
-			count, err := client.Get(node, hash, &buffer)
-			if err != nil {
-				f.ShowError(err)
-				return
-			}
-			log.Println("Count:", count)
-			if count > 0 {
-				label.SetText(buffer.String())
-			}
-		}()
 
-		// Create and show window containing label
-		title := meta.Name
-		if title == "" {
-			title = "(untitled)"
+	view := viewer.GetViewer(meta, func(writer io.Writer) uint64 {
+		hash, err := base64.RawURLEncoding.DecodeString(id)
+		if err != nil {
+			f.ShowError(err)
+			return 0
 		}
-		window := f.App.NewWindow(title)
-		window.SetContent(widget.NewVScrollContainer(label))
-		window.Resize(fyne.NewSize(800, 600))
-		window.CenterOnScreen()
-		window.Show()
-	default:
+		count, err := client.Read(node, hash, writer)
+		if err != nil {
+			f.ShowError(err)
+			return 0
+		}
+		return count
+	})
+	if view == nil {
 		f.ShowError(fmt.Errorf("Not yet implemented: %s %s", "SpaceFyne.ShowFile", meta.Type))
+		return
 	}
+
+	name := meta.Name
+	if name == "" {
+		name = "(untitled)"
+	}
+	window := f.App.NewWindow(fmt.Sprintf("%s - %s - %s", bcgo.TimestampToString(timestamp), name, id[:8]))
+	window.SetContent(view)
+	window.Resize(fyne.NewSize(800, 600))
+	window.CenterOnScreen()
+	window.Show()
 }
 
+// Adds file
+// - SpaceClient.Add(node *bcgo.Node, listener bcgo.MiningListener, name, mime string, reader io.Reader) (*bcgo.Reference, error)
+// Adds file using Remote Mining Service
+// - SpaceClient.AddRemote(node *bcgo.Node, domain, name, mime string, reader io.Reader) (*bcgo.Reference, error)
+// Get file owned by key with given hash
+// - SpaceClient.Get(node *bcgo.Node, recordHash []byte, callback MetaCallback) error
+// Get file shared to key with given hash
+// - SpaceClient.GetShared(node *bcgo.Node, recordHash []byte, callback MetaCallback) error
+// Get all files owned by key with given mime-type
+// - SpaceClient.GetAll(node *bcgo.Node, mime string, callback MetaCallback) error
+// Get all files shared to key with given mime-type
+// - SpaceClient.GetAllShared(node *bcgo.Node, mime string, callback MetaCallback) error
 // List files owned by key
 // - SpaceClient.List(node *bcgo.Node, callback MetaCallback) error
 // List files shared with key
 // - SpaceClient.ListShared(node *bcgo.Node, callback MetaCallback) error
-func (f *SpaceFyne) NewList(client *spaceclientgo.SpaceClient) *ui.MetaList {
-	return ui.NewMetaList(func(id string, meta *spacego.Meta) {
-		f.ShowFile(client, id, meta)
-	})
-}
-
-func (f *SpaceFyne) ShowNewFileDialog(callback func(string, string)) {
-	name := widget.NewEntry() // TODO Change to SelectEntry
-	mime := widget.NewEntry()
-
-	form := &widget.Form{
-		Items: []*widget.FormItem{
-			{Text: "Name", Widget: name},
-			{Text: "Mime", Widget: mime},
-		},
-	}
-	f.ShowConfirmDialog(form, func(result bool) {
-		if result {
-			n := name.Text
-			if n == "" {
-				// TODO either select lastest canvas or show error
-			}
-			m := mime.Text
-			if m == "" {
-				m = spacego.MIME_TYPE_TEXT_PLAIN
-			}
-			callback(n, m)
-		}
-	})
-}
-
-func (f *SpaceFyne) ShowConfirmDialog(content fyne.CanvasObject, callback func(bool)) {
-	if f.Dialog != nil {
-		f.Dialog.Hide()
-	}
-	f.Dialog = dialog.NewCustomConfirm("New File", "Create", "Cancel", content, callback, f.Window)
-
-	f.Dialog.Show()
-}
-
-/*
-func (c *SpaceClient) Share(node *bcgo.Node, listener bcgo.MiningListener, recordHash []byte, recipients []string) error {
-
 // Search files owned by key
-func (c *SpaceClient) Search(node *bcgo.Node, terms []string, callback MetaCallback) error {
-
+// - SpaceClient.Search(node *bcgo.Node, terms []string, callback MetaCallback) error
 // Search files shared with key
-func (c *SpaceClient) SearchShared(node *bcgo.Node, terms []string, callback MetaCallback) error {
-
+// - SpaceClient.SearchShared(node *bcgo.Node, terms []string, callback MetaCallback) error
+// Read file by given hash
+// - SpaceClient.Read(node *bcgo.Node, recordHash []byte, writer io.Writer) (uint64, error)
+// Read file shared to key with given hash
+// - SpaceClient.ReadShared(node *bcgo.Node, recordHash []byte, writer io.Writer) (uint64, error)
+// Share file with recipients
+// - SpaceClient.Share(node *bcgo.Node, listener bcgo.MiningListener, recordHash []byte, recipients []string) error
 // Tag file owned by key
-func (c *SpaceClient) Tag(node *bcgo.Node, listener bcgo.MiningListener, recordHash []byte, tag []string) ([]*bcgo.Reference, error) {
-
+// - SpaceClient.Tag(node *bcgo.Node, listener bcgo.MiningListener, recordHash []byte, tag []string) ([]*bcgo.Reference, error)
 // Tag file shared with key
-func (c *SpaceClient) TagShared(node *bcgo.Node, listener bcgo.MiningListener, recordHash []byte, tag []string) ([]*bcgo.Reference, error) {
+// - SpaceClient.TagShared(node *bcgo.Node, listener bcgo.MiningListener, recordHash []byte, tag []string) ([]*bcgo.Reference, error)
+// Get all tags for the file with the given hash
+// - SpaceClient.GetTag(node *bcgo.Node, recordHash []byte, callback func(entry *bcgo.BlockEntry, tag *spacego.Tag)) error
+// - SpaceClient.GetRegistration(merchant string, callback func(*financego.Registration) error) error
+// - SpaceClient.GetSubscription(merchant string, callback func(*financego.Subscription) error) error
 
+func (f *SpaceFyne) ShowStorage(client *spaceclientgo.SpaceClient) {
+	f.ShowError(fmt.Errorf("Not yet implemented: %s", "SpaceFyne.ShowStorage"))
+}
 
-func (c *SpaceClient) ShowTag(node *bcgo.Node, recordHash []byte, callback func(entry *bcgo.BlockEntry, tag *spacego.Tag)) error {
-
-
-func (c *SpaceClient) Registration(merchant string, callback func(*financego.Registration) error) error {
-
-
-func (c *SpaceClient) Subscription(merchant string, callback func(*financego.Subscription) error) error {
-*/
+func (f *SpaceFyne) ShowHelp(client *spaceclientgo.SpaceClient) {
+	f.ShowError(fmt.Errorf("Not yet implemented: %s", "SpaceFyne.ShowHelp"))
+}

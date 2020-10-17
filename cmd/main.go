@@ -17,22 +17,23 @@
 package main
 
 import (
+	"flag"
 	"fyne.io/fyne"
 	"fyne.io/fyne/app"
-	"fyne.io/fyne/canvas"
-	"fyne.io/fyne/layout"
+	"fyne.io/fyne/container"
 	"fyne.io/fyne/theme"
 	"fyne.io/fyne/widget"
-	"github.com/AletheiaWareLLC/bcclientgo"
-	"github.com/AletheiaWareLLC/bcfynego"
 	bcuidata "github.com/AletheiaWareLLC/bcfynego/ui/data"
 	"github.com/AletheiaWareLLC/bcgo"
 	"github.com/AletheiaWareLLC/spaceclientgo"
 	"github.com/AletheiaWareLLC/spacefynego"
+	"github.com/AletheiaWareLLC/spacefynego/ui"
 	"github.com/AletheiaWareLLC/spacefynego/ui/data"
 	"github.com/AletheiaWareLLC/spacego"
 	"log"
 )
+
+var peer = flag.String("peer", "", "Space peer")
 
 func main() {
 	// Create Application
@@ -42,76 +43,70 @@ func main() {
 	w := a.NewWindow("S P A C E")
 	w.SetMaster()
 
-	peers := append(
-		spacego.GetSpaceHosts(), // Add SPACE host as peer
-		bcgo.GetBCHost(),        // Add BC host as peer
-	)
-
 	// Create Space Client
-	c := &spaceclientgo.SpaceClient{
-		BCClient: bcclientgo.BCClient{
-			Peers: peers,
-		},
-	}
+	c := spaceclientgo.NewSpaceClient(bcgo.SplitRemoveEmpty(*peer, ",")...)
 
 	// Create Space Fyne
-	f := &spacefynego.SpaceFyne{
-		BCFyne: bcfynego.BCFyne{
-			App:    a,
-			Window: w,
-		},
+	f := spacefynego.NewSpaceFyne(a, w, c)
+
+	// Create a scrollable list of metas
+	l := ui.NewMetaList(func(id string, timestamp uint64, meta *spacego.Meta) {
+		f.ShowFile(c, id, timestamp, meta)
+	})
+
+	refreshList := func() {
+		n, err := f.GetNode(&c.BCClient)
+		if err != nil {
+			f.ShowError(err)
+			return
+		}
+		l.Update(c, n)
 	}
 
-	space := canvas.NewImageFromResource(data.SpaceIcon)
-	space.FillMode = canvas.ImageFillContain
+	// Populate list in goroutine
+	go refreshList()
 
-	// Create a scrollable list of files
-	fileList := f.NewList(c)
+	f.OnKeysImported = func(alias string) {
+		go refreshList()
+	}
+	f.OnSignedIn = func(node *bcgo.Node) {
+		go l.Update(c, node)
+		// TODO FIXME Remove
+		go f.ShowWelcome(c, node)
+	}
 
-	toolbar := widget.NewToolbar(
-		widget.NewToolbarAction(theme.DocumentCreateIcon(), func() {
-			log.Println("TODO Create File")
-			go f.NewFile(c)
-		}),
+	// Create a toolbar of common operations
+	t := widget.NewToolbar(
 		widget.NewToolbarAction(theme.ContentAddIcon(), func() {
-			log.Println("Upload File")
-			go f.UploadFile(c)
+			log.Println("Add File")
+			go f.AddFile(c)
 		}),
-		widget.NewToolbarSpacer(),
-		widget.NewToolbarAction(theme.SearchIcon(), func() {
-			log.Println("TODO Search File")
-			// TODO go f.SearchFile(c)
-		}),
-		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(theme.ViewRefreshIcon(), func() {
 			log.Println("Refresh List")
-			go func() {
-				node, err := f.GetNode(&c.BCClient)
-				if err != nil {
-					f.ShowError(err)
-					return
-				}
-				if err := c.List(node, fileList.Update); err != nil {
-					f.ShowError(err)
-					return
-				}
-				fileList.Refresh()
-			}()
+			go refreshList()
+		}),
+		widget.NewToolbarAction(theme.SearchIcon(), func() {
+			log.Println("Search File")
+			go f.SearchFile(c)
 		}),
 		widget.NewToolbarSpacer(),
+		widget.NewToolbarAction(theme.NewThemedResource(data.StorageIcon, nil), func() {
+			log.Println("Storage Info")
+			go f.ShowStorage(c)
+		}),
 		widget.NewToolbarAction(bcuidata.NewPrimaryThemedResource(bcuidata.AccountIcon), func() {
 			log.Println("Account Info")
-			go f.ShowNode(&c.BCClient)
+			go f.ShowAccount(&c.BCClient)
 		}),
 		widget.NewToolbarAction(theme.HelpIcon(), func() {
-			log.Println("TODO Display Help")
-			//go c.ShowHelp()
+			log.Println("Display Help")
+			go f.ShowHelp(c)
 		}),
 	)
 
 	// Set window content, resize window, center window, show window, and run application
-	w.SetContent(fyne.NewContainerWithLayout(layout.NewBorderLayout(toolbar, nil, nil, nil), space, toolbar, fileList))
-	w.Resize(fyne.NewSize(800, 600))
+	w.SetContent(container.NewBorder(t, nil, nil, nil, f.GetIcon(), t, l))
+	w.Resize(fyne.NewSize(600, 480))
 	w.CenterOnScreen()
 	w.ShowAndRun()
 }

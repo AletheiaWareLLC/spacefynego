@@ -19,4 +19,8 @@ set -x
 
 
 fyne bundle -name SpaceIcon -package data space.svg > icon.go
+fyne bundle -append -name CameraPhotoIcon -package data camera_photo.svg >> icon.go
+fyne bundle -append -name CameraVideoIcon -package data camera_video.svg >> icon.go
+fyne bundle -append -name MicrophoneIcon -package data microphone.svg >> icon.go
+fyne bundle -append -name StorageIcon -package data storage.svg >> icon.go
 #fyne bundle -append -name XYZIcon -package data xyz.svg >> icon.go

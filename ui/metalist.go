@@ -19,8 +19,10 @@ package ui
 import (
 	"encoding/base64"
 	"fyne.io/fyne"
+	"fyne.io/fyne/container"
 	"fyne.io/fyne/widget"
 	"github.com/AletheiaWareLLC/bcgo"
+	"github.com/AletheiaWareLLC/spaceclientgo"
 	"github.com/AletheiaWareLLC/spacego"
 	"sort"
 )
@@ -32,13 +34,41 @@ type MetaList struct {
 	timestamps map[string]uint64
 }
 
-func NewMetaList(callback func(id string, meta *spacego.Meta)) *MetaList {
+func NewMetaList(callback func(id string, timestamp uint64, meta *spacego.Meta)) *MetaList {
 	l := &MetaList{
 		metas:      make(map[string]*spacego.Meta),
 		timestamps: make(map[string]uint64),
 		List: widget.List{
 			CreateItem: func() fyne.CanvasObject {
-				return &widget.Label{}
+				return container.NewGridWithColumns(4,
+					&widget.Label{
+						TextStyle: fyne.TextStyle{
+							Bold: true,
+						},
+						Wrapping: fyne.TextTruncate,
+					},
+					&widget.Label{
+						Alignment: fyne.TextAlignTrailing,
+						TextStyle: fyne.TextStyle{
+							Monospace: true,
+						},
+						Wrapping: fyne.TextTruncate,
+					},
+					&widget.Label{
+						Alignment: fyne.TextAlignTrailing,
+						TextStyle: fyne.TextStyle{
+							Monospace: true,
+						},
+						Wrapping: fyne.TextTruncate,
+					},
+					&widget.Label{
+						Alignment: fyne.TextAlignTrailing,
+						TextStyle: fyne.TextStyle{
+							Monospace: true,
+						},
+						Wrapping: fyne.TextTruncate,
+					},
+				)
 			},
 		},
 	}
@@ -46,24 +76,32 @@ func NewMetaList(callback func(id string, meta *spacego.Meta)) *MetaList {
 		return len(l.ids)
 	}
 	l.UpdateItem = func(index int, item fyne.CanvasObject) {
+		id := l.ids[index]
 		var name string
-		m, ok := l.metas[l.ids[index]]
+		m, ok := l.metas[id]
 		if ok {
 			name = m.Name
 		}
 		if name == "" {
 			name = "(untitled)"
 		}
-		item.(*widget.Label).SetText(name)
+		items := item.(*fyne.Container).Objects
+		items[0].(*widget.Label).SetText(name)
+		items[1].(*widget.Label).SetText(bcgo.BinarySizeToString(m.Size))
+		items[2].(*widget.Label).SetText(m.Type)
+		items[3].(*widget.Label).SetText(bcgo.TimestampToString(l.timestamps[id]))
 	}
-	l.OnItemSelected = func(index int) {
-		callback(l.ids[index], l.metas[l.ids[index]])
+	l.OnSelectionChanged = func(index int) {
+		id := l.ids[index]
+		if m, ok := l.metas[id]; ok {
+			callback(id, l.timestamps[id], m)
+		}
 	}
 	l.ExtendBaseWidget(l)
 	return l
 }
 
-func (l *MetaList) Update(entry *bcgo.BlockEntry, meta *spacego.Meta) error {
+func (l *MetaList) Add(entry *bcgo.BlockEntry, meta *spacego.Meta) error {
 	id := base64.RawURLEncoding.EncodeToString(entry.RecordHash)
 	if _, ok := l.metas[id]; !ok {
 		l.metas[id] = meta
@@ -73,5 +111,13 @@ func (l *MetaList) Update(entry *bcgo.BlockEntry, meta *spacego.Meta) error {
 			return l.timestamps[l.ids[i]] < l.timestamps[l.ids[j]]
 		})
 	}
+	return nil
+}
+
+func (l *MetaList) Update(client *spaceclientgo.SpaceClient, node *bcgo.Node) error {
+	if err := client.List(node, l.Add); err != nil {
+		return err
+	}
+	l.Refresh()
 	return nil
 }

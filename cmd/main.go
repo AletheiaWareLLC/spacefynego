@@ -36,6 +36,9 @@ import (
 var peer = flag.String("peer", "", "Space peer")
 
 func main() {
+	// Parse command line flags
+	flag.Parse()
+
 	// Create Application
 	a := app.New()
 

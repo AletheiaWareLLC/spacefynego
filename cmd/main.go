@@ -57,7 +57,7 @@ func main() {
 
 	// Create a scrollable list of metas
 	l := ui.NewMetaList(func(id string, timestamp uint64, meta *spacego.Meta) {
-		f.ShowFile(c, id, timestamp, meta)
+		go f.ShowFile(c, id, timestamp, meta)
 	})
 
 	refreshList := func() {

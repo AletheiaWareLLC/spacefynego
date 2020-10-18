@@ -142,14 +142,6 @@ func (f *SpaceFyne) AddFile(client *spaceclientgo.SpaceClient) {
 	f.Dialog.Show()
 
 	/*
-		node, err := f.GetNode(&client.BCClient)
-		if err != nil {
-			f.ShowError(err)
-			return
-		}
-	*/
-
-	/*
 		edit := viewer.GetEditor(meta, func(writer io.Writer) uint64 {
 			hash, err := base64.RawURLEncoding.DecodeString(id)
 			if err != nil {

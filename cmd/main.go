@@ -101,7 +101,7 @@ func main() {
 			go f.ShowStorage(c)
 		}),
 		widget.NewToolbarAction(bcuidata.NewPrimaryThemedResource(bcuidata.AccountIcon), func() {
-			log.Println("Account Info")
+			log.Println("Show Account")
 			go f.ShowAccount(&c.BCClient)
 		}),
 		widget.NewToolbarAction(theme.HelpIcon(), func() {

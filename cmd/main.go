@@ -39,6 +39,9 @@ func main() {
 	// Parse command line flags
 	flag.Parse()
 
+	// Set log flags
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
 	// Create Application
 	a := app.New()
 

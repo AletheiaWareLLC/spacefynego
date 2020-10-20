@@ -31,6 +31,7 @@ import (
 	"github.com/AletheiaWareLLC/spacefynego/ui/data"
 	"github.com/AletheiaWareLLC/spacego"
 	"log"
+	"os"
 )
 
 var peer = flag.String("peer", "", "Space peer")
@@ -47,7 +48,11 @@ func main() {
 
 	// Create Window
 	w := a.NewWindow("S P A C E")
-	w.SetMaster()
+
+	// Set environment variable
+	if a.Settings().BuildType() == fyne.ReleaseBuild {
+		os.Setenv("LIVE", "true")
+	}
 
 	// Create Space Client
 	c := spaceclientgo.NewSpaceClient(bcgo.SplitRemoveEmpty(*peer, ",")...)

@@ -102,7 +102,7 @@ func main() {
 		}),
 		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(theme.NewThemedResource(data.StorageIcon, nil), func() {
-			log.Println("Storage Info")
+			log.Println("Show Storage")
 			go f.ShowStorage(c)
 		}),
 		widget.NewToolbarAction(bcuidata.NewPrimaryThemedResource(bcuidata.AccountIcon), func() {
@@ -110,7 +110,7 @@ func main() {
 			go f.ShowAccount(&c.BCClient)
 		}),
 		widget.NewToolbarAction(theme.HelpIcon(), func() {
-			log.Println("Display Help")
+			log.Println("Show Help")
 			go f.ShowHelp(c)
 		}),
 	)

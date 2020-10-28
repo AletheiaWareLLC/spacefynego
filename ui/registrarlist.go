@@ -72,11 +72,11 @@ func NewRegistrarList(callback func(id string, timestamp uint64, registrar *spac
 	l.Length = func() int {
 		return len(l.ids)
 	}
-	l.UpdateItem = func(index int, item fyne.CanvasObject) {
-		id := l.ids[index]
+	l.UpdateItem = func(id widget.ListItemID, item fyne.CanvasObject) {
+		i := l.ids[id]
 		var merchant *financego.Merchant
 		var service *financego.Service
-		r, ok := l.registrars[id]
+		r, ok := l.registrars[i]
 		if ok {
 			merchant = r.Merchant
 			service = r.Service
@@ -89,10 +89,13 @@ func NewRegistrarList(callback func(id string, timestamp uint64, registrar *spac
 				financego.IntervalToString(service.Interval)))
 		}
 	}
-	l.OnSelectionChanged = func(index int) {
-		id := l.ids[index]
-		if r, ok := l.registrars[id]; ok {
-			callback(id, l.timestamps[id], r)
+	l.OnSelected = func(id widget.ListItemID) {
+		if id < 0 || id > len(l.ids)-1 {
+			return
+		}
+		i := l.ids[id]
+		if r, ok := l.registrars[i]; ok {
+			callback(i, l.timestamps[i], r)
 		}
 	}
 	l.ExtendBaseWidget(l)

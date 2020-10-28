@@ -67,7 +67,7 @@ func NewTextPlain(callback func(io.Writer) uint64) fyne.CanvasObject {
 func NewImageGif(callback func(io.Writer) uint64) fyne.CanvasObject {
 	// Create image to hold image
 	img := &canvas.Image{
-		FillMode: canvas.ImageFillContain,
+		FillMode: canvas.ImageFillOriginal,
 	}
 	scroller := widget.NewScrollContainer(img)
 
@@ -94,7 +94,7 @@ func NewImageGif(callback func(io.Writer) uint64) fyne.CanvasObject {
 func NewImageJpeg(callback func(io.Writer) uint64) fyne.CanvasObject {
 	// Create image to hold image
 	img := &canvas.Image{
-		FillMode: canvas.ImageFillContain,
+		FillMode: canvas.ImageFillOriginal,
 	}
 	scroller := widget.NewScrollContainer(img)
 
@@ -121,7 +121,7 @@ func NewImageJpeg(callback func(io.Writer) uint64) fyne.CanvasObject {
 func NewImagePng(callback func(io.Writer) uint64) fyne.CanvasObject {
 	// Create image to hold image
 	img := &canvas.Image{
-		FillMode: canvas.ImageFillContain,
+		FillMode: canvas.ImageFillOriginal,
 	}
 	scroller := widget.NewScrollContainer(img)
 

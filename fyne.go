@@ -227,6 +227,7 @@ func (f *SpaceFyne) ShowFile(client *spaceclientgo.SpaceClient, id string, times
 			f.ShowError(err)
 			return 0
 		}
+		// TODO display and update progress bar
 		count, err := client.Read(node, hash, writer)
 		if err != nil {
 			f.ShowError(err)

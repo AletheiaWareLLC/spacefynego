@@ -75,10 +75,10 @@ func NewMetaList(callback func(id string, timestamp uint64, meta *spacego.Meta))
 	l.Length = func() int {
 		return len(l.ids)
 	}
-	l.UpdateItem = func(index int, item fyne.CanvasObject) {
-		id := l.ids[index]
+	l.UpdateItem = func(id widget.ListItemID, item fyne.CanvasObject) {
+		i := l.ids[id]
 		var name string
-		m, ok := l.metas[id]
+		m, ok := l.metas[i]
 		if ok {
 			name = m.Name
 		}
@@ -89,12 +89,15 @@ func NewMetaList(callback func(id string, timestamp uint64, meta *spacego.Meta))
 		items[0].(*widget.Label).SetText(name)
 		items[1].(*widget.Label).SetText(bcgo.BinarySizeToString(m.Size))
 		items[2].(*widget.Label).SetText(m.Type)
-		items[3].(*widget.Label).SetText(bcgo.TimestampToString(l.timestamps[id]))
+		items[3].(*widget.Label).SetText(bcgo.TimestampToString(l.timestamps[i]))
 	}
-	l.OnSelectionChanged = func(index int) {
-		id := l.ids[index]
-		if m, ok := l.metas[id]; ok {
-			callback(id, l.timestamps[id], m)
+	l.OnSelected = func(id widget.ListItemID) {
+		if id < 0 || id > len(l.ids)-1 {
+			return
+		}
+		i := l.ids[id]
+		if m, ok := l.metas[i]; ok {
+			callback(i, l.timestamps[i], m)
 		}
 	}
 	l.ExtendBaseWidget(l)

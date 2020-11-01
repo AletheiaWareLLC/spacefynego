@@ -73,6 +73,9 @@ func NewRegistrarList(callback func(id string, timestamp uint64, registrar *spac
 		return len(l.ids)
 	}
 	l.UpdateItem = func(id widget.ListItemID, item fyne.CanvasObject) {
+		if id < 0 || id >= len(l.ids) {
+			return
+		}
 		i := l.ids[id]
 		var merchant *financego.Merchant
 		var service *financego.Service
@@ -90,11 +93,11 @@ func NewRegistrarList(callback func(id string, timestamp uint64, registrar *spac
 		}
 	}
 	l.OnSelected = func(id widget.ListItemID) {
-		if id < 0 || id > len(l.ids)-1 {
+		if id < 0 || id >= len(l.ids) {
 			return
 		}
 		i := l.ids[id]
-		if r, ok := l.registrars[i]; ok {
+		if r, ok := l.registrars[i]; ok && callback != nil {
 			callback(i, l.timestamps[i], r)
 		}
 	}

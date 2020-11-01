@@ -80,37 +80,33 @@ func main() {
 	f.OnKeysImported = func(alias string) {
 		go refreshList()
 	}
+	onSignedIn := f.OnSignedIn
 	f.OnSignedIn = func(node *bcgo.Node) {
+		if onSignedIn != nil {
+			onSignedIn(node)
+		}
 		go l.Update(c, node)
-		// TODO FIXME Remove
-		go f.ShowWelcome(c, node)
 	}
 
 	// Create a toolbar of common operations
 	t := widget.NewToolbar(
 		widget.NewToolbarAction(theme.ContentAddIcon(), func() {
-			log.Println("Add File")
-			go f.AddFile(c)
+			go f.Add(c)
 		}),
 		widget.NewToolbarAction(theme.ViewRefreshIcon(), func() {
-			log.Println("Refresh List")
 			go refreshList()
 		}),
 		widget.NewToolbarAction(theme.SearchIcon(), func() {
-			log.Println("Search File")
 			go f.SearchFile(c)
 		}),
 		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(theme.NewThemedResource(data.StorageIcon, nil), func() {
-			log.Println("Show Storage")
 			go f.ShowStorage(c)
 		}),
 		widget.NewToolbarAction(bcuidata.NewPrimaryThemedResource(bcuidata.AccountIcon), func() {
-			log.Println("Show Account")
 			go f.ShowAccount(&c.BCClient)
 		}),
 		widget.NewToolbarAction(theme.HelpIcon(), func() {
-			log.Println("Show Help")
 			go f.ShowHelp(c)
 		}),
 	)

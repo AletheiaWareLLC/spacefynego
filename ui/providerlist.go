@@ -1,0 +1,142 @@
+/*
+ * Copyright 2020 Aletheia Ware LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package ui
+
+import (
+	"fmt"
+	"fyne.io/fyne"
+	"fyne.io/fyne/container"
+	"fyne.io/fyne/widget"
+	"github.com/AletheiaWareLLC/bcgo"
+	"github.com/AletheiaWareLLC/financego"
+	"github.com/AletheiaWareLLC/spaceclientgo"
+	"github.com/AletheiaWareLLC/spacego"
+)
+
+type ProviderList struct {
+	widget.List
+	ids           []string
+	registrars    map[string]*spacego.Registrar
+	registrations map[string]*financego.Registration
+	subscriptions map[string]*financego.Subscription
+}
+
+func NewProviderList(callback func(id string, registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription)) *ProviderList {
+	l := &ProviderList{
+		registrars:    make(map[string]*spacego.Registrar),
+		registrations: make(map[string]*financego.Registration),
+		subscriptions: make(map[string]*financego.Subscription),
+		List: widget.List{
+			CreateItem: func() fyne.CanvasObject {
+				return container.NewGridWithRows(2,
+					container.NewGridWithColumns(3,
+						&widget.Label{
+							Text:      "Template Object",
+							Alignment: fyne.TextAlignLeading,
+							TextStyle: fyne.TextStyle{
+								Bold: true,
+							},
+						},
+						&widget.Label{
+							Text:      "Template Object",
+							Alignment: fyne.TextAlignCenter,
+							TextStyle: fyne.TextStyle{
+								Monospace: true,
+							},
+							Wrapping: fyne.TextTruncate,
+						},
+						&widget.Label{
+							Text:      "Template Object",
+							Alignment: fyne.TextAlignTrailing,
+							TextStyle: fyne.TextStyle{
+								Monospace: true,
+							},
+							Wrapping: fyne.TextTruncate,
+						},
+					),
+					container.NewGridWithColumns(2,
+						&widget.Label{
+							Text:      "Template Object",
+							Alignment: fyne.TextAlignLeading,
+						},
+						&widget.Label{
+							Text:      "Template Object",
+							Alignment: fyne.TextAlignTrailing,
+						},
+					),
+				)
+			},
+		},
+	}
+	l.Length = func() int {
+		return len(l.ids)
+	}
+	l.UpdateItem = func(id widget.ListItemID, item fyne.CanvasObject) {
+		if id < 0 || id >= len(l.ids) {
+			return
+		}
+		i := l.ids[id]
+		var merchant *financego.Merchant
+		var service *financego.Service
+		r, ok := l.registrars[i]
+		if ok {
+			merchant = r.Merchant
+			service = r.Service
+			items := item.(*fyne.Container).Objects
+			top := items[0].(*fyne.Container).Objects
+			top[0].(*widget.Label).SetText(merchant.Alias)
+			top[1].(*widget.Label).SetText(service.Country)
+			top[2].(*widget.Label).SetText(fmt.Sprintf("%s / %s / %s",
+				bcgo.MoneyToString(service.Currency, service.GroupPrice),
+				bcgo.DecimalSizeToString(uint64(service.GroupSize)),
+				financego.IntervalToString(service.Interval)))
+			bottom := items[1].(*fyne.Container).Objects
+			bottom[0].(*widget.Label).SetText(l.registrations[i].CustomerId)
+			bottom[1].(*widget.Label).SetText(l.subscriptions[i].SubscriptionItemId)
+		}
+	}
+	l.OnSelected = func(id widget.ListItemID) {
+		if id < 0 || id >= len(l.ids) {
+			return
+		}
+		i := l.ids[id]
+		if r, ok := l.registrars[i]; ok && callback != nil {
+			callback(i, r, l.registrations[i], l.subscriptions[i])
+		}
+	}
+	l.ExtendBaseWidget(l)
+	return l
+}
+
+func (l *ProviderList) Add(registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription) error {
+	id := registrar.Merchant.Alias
+	if _, ok := l.registrars[id]; !ok {
+		l.registrars[id] = registrar
+		l.registrations[id] = registration
+		l.subscriptions[id] = subscription
+		l.ids = append(l.ids, id)
+	}
+	return nil
+}
+
+func (l *ProviderList) Update(client *spaceclientgo.SpaceClient, node *bcgo.Node) error {
+	if err := client.GetRegistrarsForNode(node, l.Add); err != nil {
+		return err
+	}
+	l.Refresh()
+	return nil
+}

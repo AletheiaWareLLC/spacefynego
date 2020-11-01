@@ -23,17 +23,20 @@ import (
 	"fyne.io/fyne/canvas"
 	"fyne.io/fyne/container"
 	"fyne.io/fyne/dialog"
+	"fyne.io/fyne/storage"
 	"fyne.io/fyne/theme"
 	"fyne.io/fyne/widget"
 	"github.com/AletheiaWareLLC/bcfynego"
 	bcui "github.com/AletheiaWareLLC/bcfynego/ui"
 	"github.com/AletheiaWareLLC/bcgo"
+	"github.com/AletheiaWareLLC/financego"
 	"github.com/AletheiaWareLLC/spaceclientgo"
 	"github.com/AletheiaWareLLC/spacefynego/ui"
 	"github.com/AletheiaWareLLC/spacefynego/ui/data"
 	"github.com/AletheiaWareLLC/spacefynego/ui/viewer"
 	"github.com/AletheiaWareLLC/spacego"
 	"io"
+	"log"
 	"net/url"
 )
 
@@ -48,6 +51,18 @@ func NewSpaceFyne(a fyne.App, w fyne.Window, c *spaceclientgo.SpaceClient) *Spac
 	f.OnKeysImported = func(alias string) {
 		// TODO show success dialog, and tell the user to sign in with their newly-imported alias, and password
 	}
+	f.OnSignedIn = func(node *bcgo.Node) {
+		count := 0
+		if err := c.GetRegistrarsForNode(node, func(*spacego.Registrar, *financego.Registration, *financego.Subscription) error {
+			count++
+			return nil
+		}); err != nil {
+			log.Println(err)
+		}
+		if count < spacego.GetMinimumRegistrars() {
+			f.ShowRegistrarSelectionDialog(c, node)
+		}
+	}
 	f.OnSignedUp = func(node *bcgo.Node) {
 		f.ShowWelcome(c, node)
 	}
@@ -56,6 +71,21 @@ func NewSpaceFyne(a fyne.App, w fyne.Window, c *spaceclientgo.SpaceClient) *Spac
 
 // ShowWelcome displays a wizard to welcome a new user and walk them through the setup process.
 func (f *SpaceFyne) ShowWelcome(client *spaceclientgo.SpaceClient, node *bcgo.Node) {
+	if f.Dialog != nil {
+		f.Dialog.Hide()
+	}
+	f.Dialog = dialog.NewCustomConfirm("Welcome", "Next", "Cancel",
+		widget.NewLabel(fmt.Sprintf("Hello %s, Welcome to S P A C E!", node.Alias)),
+		func(result bool) {
+			if result {
+				f.ShowRegistrarSelectionDialog(client, node)
+			}
+		},
+		f.Window)
+	f.Dialog.Show()
+}
+
+func (f *SpaceFyne) ShowRegistrarSelectionDialog(client *spaceclientgo.SpaceClient, node *bcgo.Node) {
 	if f.Dialog != nil {
 		f.Dialog.Hide()
 	}
@@ -75,10 +105,10 @@ func (f *SpaceFyne) ShowWelcome(client *spaceclientgo.SpaceClient, node *bcgo.No
 		}
 	})
 	go l.Update(client, node)
-	f.Dialog = dialog.NewCustom("Welcome", "OK",
+	f.Dialog = dialog.NewCustom("Welcome", "Done",
 		container.NewGridWithRows(3,
-			widget.NewLabel(fmt.Sprintf("Hello %s, welcome to S P A C E", node.Alias)),
-			widget.NewLabel("Your encrypted data will be stored by your choice of storage providers.\nChoose at least two providers from the list below;"),
+			widget.NewLabel("Your encrypted data will be stored by your choice of storage providers."),
+			widget.NewLabel(fmt.Sprintf("Choose at least %d providers from the list below;", spacego.GetMinimumRegistrars())),
 			l,
 		),
 		f.Window)
@@ -92,41 +122,47 @@ func (f *SpaceFyne) GetIcon() fyne.CanvasObject {
 	return icon
 }
 
-// AddFile displays a dialog (write text, take a picture, upload an existing file), and adds the result.
-func (f *SpaceFyne) AddFile(client *spaceclientgo.SpaceClient) {
+// Add displays a dialog (write text, take a picture, upload an existing file or folder), and adds the result.
+func (f *SpaceFyne) Add(client *spaceclientgo.SpaceClient) {
 	composeText := widget.NewButtonWithIcon("Text", theme.DocumentCreateIcon(), func() {
 		if f.Dialog != nil {
 			f.Dialog.Hide()
 		}
 		// TODO
-		f.ShowError(fmt.Errorf("Not yet implemented: %s %s", "SpaceFyne.AddFile", "Text"))
+		f.ShowError(fmt.Errorf("Not yet implemented: %s %s", "SpaceFyne.Add", "Text"))
 	})
 	captureImage := widget.NewButtonWithIcon("Image", theme.NewThemedResource(data.CameraPhotoIcon, nil), func() {
 		if f.Dialog != nil {
 			f.Dialog.Hide()
 		}
 		// TODO
-		f.ShowError(fmt.Errorf("Not yet implemented: %s %s", "SpaceFyne.AddFile", "Image"))
+		f.ShowError(fmt.Errorf("Not yet implemented: %s %s", "SpaceFyne.Add", "Image"))
 	})
 	captureVideo := widget.NewButtonWithIcon("Video", theme.NewThemedResource(data.CameraVideoIcon, nil), func() {
 		if f.Dialog != nil {
 			f.Dialog.Hide()
 		}
 		// TODO
-		f.ShowError(fmt.Errorf("Not yet implemented: %s %s", "SpaceFyne.AddFile", "Video"))
+		f.ShowError(fmt.Errorf("Not yet implemented: %s %s", "SpaceFyne.Add", "Video"))
 	})
 	captureAudio := widget.NewButtonWithIcon("Audio", theme.NewThemedResource(data.MicrophoneIcon, nil), func() {
 		if f.Dialog != nil {
 			f.Dialog.Hide()
 		}
 		// TODO
-		f.ShowError(fmt.Errorf("Not yet implemented: %s %s", "SpaceFyne.AddFile", "Audio"))
+		f.ShowError(fmt.Errorf("Not yet implemented: %s %s", "SpaceFyne.Add", "Audio"))
 	})
 	uploadFile := widget.NewButtonWithIcon("Document", theme.FileIcon(), func() {
 		if f.Dialog != nil {
 			f.Dialog.Hide()
 		}
-		go f.UploadFile(client)
+		go f.ShowUploadFileDialog(client)
+	})
+	uploadFolder := widget.NewButtonWithIcon("Directory", theme.FolderIcon(), func() {
+		if f.Dialog != nil {
+			f.Dialog.Hide()
+		}
+		go f.ShowUploadFolderDialog(client)
 	})
 	content := container.NewAdaptiveGrid(3,
 		composeText,
@@ -134,79 +170,12 @@ func (f *SpaceFyne) AddFile(client *spaceclientgo.SpaceClient) {
 		captureAudio,
 		captureVideo,
 		uploadFile,
+		uploadFolder,
 	)
 	if f.Dialog != nil {
 		f.Dialog.Hide()
 	}
-	f.Dialog = dialog.NewCustom("Add File", "Cancel", content, f.Window)
-	f.Dialog.Show()
-
-	/*
-		edit := viewer.GetEditor(meta, func(writer io.Writer) uint64 {
-			hash, err := base64.RawURLEncoding.DecodeString(id)
-			if err != nil {
-				f.ShowError(err)
-				return 0
-			}
-			count, err := client.Get(node, hash, writer)
-			if err != nil {
-				f.ShowError(err)
-				return 0
-			}
-			return count
-		})
-
-		if edit == nil {
-			f.ShowError(fmt.Errorf("Not yet implemented: %s %s", "SpaceFyne.NewFile", mime))
-			return
-		}
-
-		if name == "" {
-			name = "(untitled)"
-		}
-		window := f.App.NewWindow(name)
-		window.SetContent(edit)
-		window.Resize(fyne.NewSize(800, 600))
-		window.CenterOnScreen()
-		window.Show()
-	*/
-}
-
-// UploadFile displays a file picker, and adds the resulting file.
-func (f *SpaceFyne) UploadFile(client *spaceclientgo.SpaceClient) {
-	node, err := f.GetNode(&client.BCClient)
-	if err != nil {
-		f.ShowError(err)
-		return
-	}
-
-	// TODO ensure alias has chosen providers, and those providers are added to node.Network.Peers
-
-	if f.Dialog != nil {
-		f.Dialog.Hide()
-	}
-	f.Dialog = dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
-		if err == nil && reader == nil {
-			return
-		}
-		if err != nil {
-			f.ShowError(err)
-			return
-		}
-
-		// Show progress dialog
-		progress := dialog.NewProgress("Uploading", "Uploading "+reader.Name(), f.Window)
-		progress.Show()
-		defer progress.Hide()
-		listener := &bcui.ProgressMiningListener{Func: progress.SetValue}
-
-		reference, err := client.Add(node, listener, reader.Name(), reader.URI().MimeType(), reader)
-		if err != nil {
-			f.ShowError(err)
-		}
-		fmt.Println("Uploaded:", reference)
-	}, f.Window)
-	//f.Dialog.SetFilter(storage.NewExtensionFileFilter([]string{".png", ".txt"}))
+	f.Dialog = dialog.NewCustom("Add", "Cancel", content, f.Window)
 	f.Dialog.Show()
 }
 
@@ -287,9 +256,175 @@ func (f *SpaceFyne) ShowFile(client *spaceclientgo.SpaceClient, id string, times
 // - SpaceClient.GetSubscription(merchant string, callback func(*financego.Subscription) error) error
 
 func (f *SpaceFyne) ShowStorage(client *spaceclientgo.SpaceClient) {
-	f.ShowError(fmt.Errorf("Not yet implemented: %s", "SpaceFyne.ShowStorage"))
+	node, err := f.GetNode(&client.BCClient)
+	if err != nil {
+		f.ShowError(err)
+		return
+	}
+
+	if f.Dialog != nil {
+		f.Dialog.Hide()
+	}
+	l := ui.NewProviderList(func(id string, registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription) {
+		// TODO
+	})
+	go l.Update(client, node)
+	f.Dialog = dialog.NewCustom("Registrars", "OK", l, f.Window)
+	f.Dialog.Resize(fyne.NewSize(0, 300))
+	f.Dialog.Show()
 }
 
 func (f *SpaceFyne) ShowHelp(client *spaceclientgo.SpaceClient) {
 	f.ShowError(fmt.Errorf("Not yet implemented: %s", "SpaceFyne.ShowHelp"))
+}
+
+// ShowUploadFileDialog displays a file picker, and adds the resulting file.
+func (f *SpaceFyne) ShowUploadFileDialog(client *spaceclientgo.SpaceClient) {
+	node, err := f.GetNode(&client.BCClient)
+	if err != nil {
+		f.ShowError(err)
+		return
+	}
+
+	var domains []string
+	if err := client.GetRegistrarsForNode(node, func(registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription) error {
+		if registrar != nil && registration != nil && subscription != nil {
+			domain := registrar.Merchant.Domain
+			if domain == "" {
+				domain = registrar.Merchant.Alias
+			}
+			domains = append(domains, domain)
+		}
+		return nil
+	}); err != nil {
+		log.Println(err)
+	}
+	if len(domains) == 0 {
+		f.ShowRegistrarSelectionDialog(client, node)
+		return
+	}
+
+	if node.Network != nil {
+		if n, ok := node.Network.(*bcgo.TCPNetwork); ok {
+			for _, d := range domains {
+				n.AddPeer(d)
+			}
+		}
+	}
+
+	if f.Dialog != nil {
+		f.Dialog.Hide()
+	}
+	f.Dialog = dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
+		if err != nil {
+			f.ShowError(err)
+			return
+		}
+		if reader == nil {
+			return
+		}
+		f.UploadFile(client, node, reader)
+	}, f.Window)
+	f.Dialog.Show()
+}
+
+// ShowUploadFolderDialog displays a folder picker, and adds the resulting folder.
+func (f *SpaceFyne) ShowUploadFolderDialog(client *spaceclientgo.SpaceClient) {
+	node, err := f.GetNode(&client.BCClient)
+	if err != nil {
+		f.ShowError(err)
+		return
+	}
+
+	var domains []string
+	if err := client.GetRegistrarsForNode(node, func(registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription) error {
+		if registrar != nil && registration != nil && subscription != nil {
+			domain := registrar.Merchant.Domain
+			if domain == "" {
+				domain = registrar.Merchant.Alias
+			}
+			domains = append(domains, domain)
+		}
+		return nil
+	}); err != nil {
+		log.Println(err)
+	}
+	if len(domains) == 0 {
+		f.ShowRegistrarSelectionDialog(client, node)
+		return
+	}
+
+	if node.Network != nil {
+		if n, ok := node.Network.(*bcgo.TCPNetwork); ok {
+			for _, d := range domains {
+				n.AddPeer(d)
+			}
+		}
+	}
+
+	if f.Dialog != nil {
+		f.Dialog.Hide()
+	}
+	f.Dialog = dialog.NewFolderOpen(func(lister fyne.ListableURI, err error) {
+		if err != nil {
+			f.ShowError(err)
+			return
+		}
+		if lister == nil {
+			return
+		}
+		f.UploadFolder(client, node, lister)
+	}, f.Window)
+	f.Dialog.Show()
+}
+
+func (f *SpaceFyne) UploadFile(client *spaceclientgo.SpaceClient, node *bcgo.Node, file fyne.URIReadCloser) {
+	// Show progress dialog
+	progress := dialog.NewProgress("Uploading", "Uploading "+file.Name(), f.Window)
+	progress.Show()
+	defer progress.Hide()
+	listener := &bcui.ProgressMiningListener{Func: progress.SetValue}
+
+	reference, err := client.Add(node, listener, file.Name(), file.URI().MimeType(), file)
+	if err != nil {
+		f.ShowError(err)
+	}
+	log.Println("Uploaded:", reference)
+}
+
+func (f *SpaceFyne) UploadFolder(client *spaceclientgo.SpaceClient, node *bcgo.Node, folder fyne.ListableURI) {
+	uris, err := folder.List()
+	if err != nil {
+		f.ShowError(err)
+		return
+	}
+	count := len(uris)
+
+	// Show progress dialog
+	progress := dialog.NewProgress("Uploading", "Uploading "+folder.Name(), f.Window)
+	progress.Show()
+	defer progress.Hide()
+
+	for i, uri := range uris {
+		progress.SetValue(float64(i) / float64(count))
+
+		// Check if URI points to Folder
+		if lister, ok := uri.(fyne.ListableURI); ok {
+			f.UploadFolder(client, node, lister)
+			continue
+		}
+		// Check if URI points to Folder
+		if lister, err := storage.ListerForURI(uri); err == nil {
+			f.UploadFolder(client, node, lister)
+			continue
+		}
+
+		// URI points to File
+		file, err := storage.OpenFileFromURI(uri)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		f.UploadFile(client, node, file)
+	}
 }

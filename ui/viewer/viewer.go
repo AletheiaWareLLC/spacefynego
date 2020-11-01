@@ -22,9 +22,10 @@ import (
 	"fyne.io/fyne/canvas"
 	"fyne.io/fyne/widget"
 	"github.com/AletheiaWareLLC/spacego"
-	"image/gif"
-	"image/jpeg"
-	"image/png"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 	"io"
 	"log"
 )
@@ -34,11 +35,13 @@ func GetViewer(meta *spacego.Meta, callback func(io.Writer) uint64) fyne.CanvasO
 	case spacego.MIME_TYPE_TEXT_PLAIN:
 		return NewTextPlain(callback)
 	case spacego.MIME_TYPE_IMAGE_GIF:
-		return NewImageGif(callback)
+		fallthrough
 	case spacego.MIME_TYPE_IMAGE_JPEG:
-		return NewImageJpeg(callback)
+		fallthrough
+		// TODO	case spacego.MIME_TYPE_IMAGE_SVG:
+		// TODO		fallthrough
 	case spacego.MIME_TYPE_IMAGE_PNG:
-		return NewImagePng(callback)
+		return NewImage(callback)
 	}
 	return nil
 }
@@ -64,7 +67,7 @@ func NewTextPlain(callback func(io.Writer) uint64) fyne.CanvasObject {
 	return scroller
 }
 
-func NewImageGif(callback func(io.Writer) uint64) fyne.CanvasObject {
+func NewImage(callback func(io.Writer) uint64) fyne.CanvasObject {
 	// Create image to hold image
 	img := &canvas.Image{
 		FillMode: canvas.ImageFillOriginal,
@@ -77,61 +80,7 @@ func NewImageGif(callback func(io.Writer) uint64) fyne.CanvasObject {
 		count := callback(&buffer)
 		log.Println("Count:", count)
 		if count > 0 {
-			i, err := gif.Decode(&buffer)
-			if err != nil {
-				log.Println("Error:", err)
-				return
-			}
-			img.Image = i
-			img.Refresh()
-			scroller.Refresh()
-		}
-	}()
-
-	return scroller
-}
-
-func NewImageJpeg(callback func(io.Writer) uint64) fyne.CanvasObject {
-	// Create image to hold image
-	img := &canvas.Image{
-		FillMode: canvas.ImageFillOriginal,
-	}
-	scroller := widget.NewScrollContainer(img)
-
-	// Create goroutine to load file contents and update image
-	go func() {
-		var buffer bytes.Buffer
-		count := callback(&buffer)
-		log.Println("Count:", count)
-		if count > 0 {
-			i, err := jpeg.Decode(&buffer)
-			if err != nil {
-				log.Println("Error:", err)
-				return
-			}
-			img.Image = i
-			img.Refresh()
-			scroller.Refresh()
-		}
-	}()
-
-	return scroller
-}
-
-func NewImagePng(callback func(io.Writer) uint64) fyne.CanvasObject {
-	// Create image to hold image
-	img := &canvas.Image{
-		FillMode: canvas.ImageFillOriginal,
-	}
-	scroller := widget.NewScrollContainer(img)
-
-	// Create goroutine to load file contents and update image
-	go func() {
-		var buffer bytes.Buffer
-		count := callback(&buffer)
-		log.Println("Count:", count)
-		if count > 0 {
-			i, err := png.Decode(&buffer)
+			i, _, err := image.Decode(&buffer)
 			if err != nil {
 				log.Println("Error:", err)
 				return

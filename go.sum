@@ -15,6 +15,8 @@ github.com/AletheiaWareLLC/bcgo v0.0.0-20201021001123-35bd5cc1e539 h1:TMdtHs5uIG
 github.com/AletheiaWareLLC/bcgo v0.0.0-20201021001123-35bd5cc1e539/go.mod h1:ym3mInCG7CPa7aVqKjcKwz2eTPTXQFZb3sL3xI6zq+A=
 github.com/AletheiaWareLLC/bcgo v0.0.0-20201101195211-883b0688af37 h1:SDQbraFVYc/GoMfX1PrDCNiZNbepxYpqTWDKGbI/7RY=
 github.com/AletheiaWareLLC/bcgo v0.0.0-20201101195211-883b0688af37/go.mod h1:VsBZIx6j/X1AqJd8CJgJGOkDZTog9PzdbYZzIadAQ8U=
+github.com/AletheiaWareLLC/bcgo v0.0.0-20201102234723-8c30ed9b4c80 h1:bxVbpZDMzv+TAXitKmE494IOgeygjO0563V1KPeSV5k=
+github.com/AletheiaWareLLC/bcgo v0.0.0-20201102234723-8c30ed9b4c80/go.mod h1:VsBZIx6j/X1AqJd8CJgJGOkDZTog9PzdbYZzIadAQ8U=
 github.com/AletheiaWareLLC/cryptogo v0.0.0-20200510174953-0e615f98810e/go.mod h1:5xGQjA12qwjNFD8AvA5Ml7AaxeZaRJayrAoWCOcn2pw=
 github.com/AletheiaWareLLC/cryptogo v0.0.0-20200516185501-ee82a4f19582/go.mod h1:SWcV7qGsxDonWxTCL8AB7M/rjpjNzmEk45adPrUtrYM=
 github.com/AletheiaWareLLC/cryptogo v0.0.0-20201018124538-00695772412e h1:YvNGi8xae8oX56RpNJ+mV4cnEUxkmHUm0uJKjVCD8a8=
@@ -23,8 +25,8 @@ github.com/AletheiaWareLLC/financego v0.0.0-20200510181222-6dba1296372b h1:kZFc0
 github.com/AletheiaWareLLC/financego v0.0.0-20200510181222-6dba1296372b/go.mod h1:Z/751EVHK2twDlP7vVgjQ5e6ZWrlL6KWFUGdmmB7SVE=
 github.com/AletheiaWareLLC/financego v0.0.0-20201101181318-0926a12fe20b h1:ZntDLxJbtOLdsWx5IUKFrKEzPNEAV4nf/q8bYrEdr50=
 github.com/AletheiaWareLLC/financego v0.0.0-20201101181318-0926a12fe20b/go.mod h1:ul75wp1USmSWNRaQqjpVft/b8HErn2Ey880x8llgMy4=
-github.com/AletheiaWareLLC/spaceclientgo v0.0.0-20201101201014-a1c5dbd6abeb h1:xYxynNN3xCd54sOCqiyEb43AwiXct0Q8O++4TofiSgE=
-github.com/AletheiaWareLLC/spaceclientgo v0.0.0-20201101201014-a1c5dbd6abeb/go.mod h1:Xn2W0unhDPiDQjLBtKqsMHJGu5e/6ZQf5TI05YFAWpo=
+github.com/AletheiaWareLLC/spaceclientgo v0.0.0-20201106184716-299e8b6a1b0f h1:HDLE6iK7I+DI5xXbVX92GNawnLNrpyZ0IlQQ8le7PP8=
+github.com/AletheiaWareLLC/spaceclientgo v0.0.0-20201106184716-299e8b6a1b0f/go.mod h1:Xn2W0unhDPiDQjLBtKqsMHJGu5e/6ZQf5TI05YFAWpo=
 github.com/AletheiaWareLLC/spacego v0.0.0-20201030195907-c78b531802dc h1:be+uAQRRL1yAEbX2B7kJS1k4lUiH/NM1Fjdz/+Oc9wA=
 github.com/AletheiaWareLLC/spacego v0.0.0-20201030195907-c78b531802dc/go.mod h1:N1Mg//7hMFGU6LTvng+CmcS05XnzmfcY2RayFI3MIkU=
 github.com/AletheiaWareLLC/testinggo v0.0.0-20200510171654-41852dce2bed h1:j78c50NXQThI3UYbfm+qIDMhozmnIEP3DfY6RXzve4o=
@@ -167,6 +169,8 @@ golang.org/x/sys v0.0.0-20201020230747-6e5568b54d1a h1:e3IU37lwO4aq3uoRKINC7Jiko
 golang.org/x/sys v0.0.0-20201020230747-6e5568b54d1a/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20201101102859-da207088b7d1 h1:a/mKvvZr9Jcc8oKfcmgzyp7OwF73JPWsQLvH1z2Kxck=
 golang.org/x/sys v0.0.0-20201101102859-da207088b7d1/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+golang.org/x/sys v0.0.0-20201106081118-db71ae66460a h1:ALUFBKlIyeY7y5ZgPJmblk/vKz+zBQSnNiPkt41sgeg=
+golang.org/x/sys v0.0.0-20201106081118-db71ae66460a/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 golang.org/x/text v0.3.2/go.mod h1:bEr9sfX3Q8Zfm5fL9x+3itogRgK3+ptLWKqgva+5dAk=
 golang.org/x/text v0.3.3 h1:cokOdA+Jmi5PJGXLlLllQSgYigAEfHXJAERHVMaCc2k=

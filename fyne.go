@@ -286,30 +286,14 @@ func (f *SpaceFyne) ShowUploadFileDialog(client *spaceclientgo.SpaceClient) {
 		return
 	}
 
-	var domains []string
-	if err := client.GetRegistrarsForNode(node, func(registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription) error {
-		if registrar != nil && registration != nil && subscription != nil {
-			domain := registrar.Merchant.Domain
-			if domain == "" {
-				domain = registrar.Merchant.Alias
-			}
-			domains = append(domains, domain)
-		}
-		return nil
-	}); err != nil {
+	domains, err := f.getRegistrarDomainsForNode(client, node)
+	if err != nil {
 		log.Println(err)
 	}
+
 	if len(domains) == 0 {
 		f.ShowRegistrarSelectionDialog(client, node)
 		return
-	}
-
-	if node.Network != nil {
-		if n, ok := node.Network.(*bcgo.TCPNetwork); ok {
-			for _, d := range domains {
-				n.AddPeer(d)
-			}
-		}
 	}
 
 	if d := f.Dialog; d != nil {
@@ -336,30 +320,14 @@ func (f *SpaceFyne) ShowUploadFolderDialog(client *spaceclientgo.SpaceClient) {
 		return
 	}
 
-	var domains []string
-	if err := client.GetRegistrarsForNode(node, func(registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription) error {
-		if registrar != nil && registration != nil && subscription != nil {
-			domain := registrar.Merchant.Domain
-			if domain == "" {
-				domain = registrar.Merchant.Alias
-			}
-			domains = append(domains, domain)
-		}
-		return nil
-	}); err != nil {
+	domains, err := f.getRegistrarDomainsForNode(client, node)
+	if err != nil {
 		log.Println(err)
 	}
+
 	if len(domains) == 0 {
 		f.ShowRegistrarSelectionDialog(client, node)
 		return
-	}
-
-	if node.Network != nil {
-		if n, ok := node.Network.(*bcgo.TCPNetwork); ok {
-			for _, d := range domains {
-				n.AddPeer(d)
-			}
-		}
 	}
 
 	if d := f.Dialog; d != nil {
@@ -427,4 +395,33 @@ func (f *SpaceFyne) UploadFolder(client *spaceclientgo.SpaceClient, node *bcgo.N
 		}
 		f.UploadFile(client, node, file)
 	}
+}
+
+func (f *SpaceFyne) getRegistrarDomainsForNode(client *spaceclientgo.SpaceClient, node *bcgo.Node) (domains []string, err error) {
+	progress := dialog.NewProgressInfinite("Uploading", "Getting Registrars", f.Window)
+	progress.Show()
+	defer progress.Hide()
+	var net *bcgo.TCPNetwork
+	if node.Network != nil {
+		if n, ok := node.Network.(*bcgo.TCPNetwork); ok {
+			net = n
+		}
+	}
+	err = client.GetRegistrarsForNode(node, func(registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription) error {
+		if registrar != nil && registration != nil && subscription != nil {
+			domain := registrar.Merchant.Domain
+			if domain == "" {
+				domain = registrar.Merchant.Alias
+			}
+			// Add any missing domains to network
+			if net != nil {
+				if _, ok := net.Peers[domain]; !ok {
+					net.Peers[domain] = 0
+				}
+			}
+			domains = append(domains, domain)
+		}
+		return nil
+	})
+	return
 }

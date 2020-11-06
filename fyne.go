@@ -71,8 +71,8 @@ func NewSpaceFyne(a fyne.App, w fyne.Window, c *spaceclientgo.SpaceClient) *Spac
 
 // ShowWelcome displays a wizard to welcome a new user and walk them through the setup process.
 func (f *SpaceFyne) ShowWelcome(client *spaceclientgo.SpaceClient, node *bcgo.Node) {
-	if f.Dialog != nil {
-		f.Dialog.Hide()
+	if d := f.Dialog; d != nil {
+		d.Hide()
 	}
 	f.Dialog = dialog.NewCustomConfirm("Welcome", "Next", "Cancel",
 		widget.NewLabel(fmt.Sprintf("Hello %s, Welcome to S P A C E!", node.Alias)),
@@ -86,8 +86,8 @@ func (f *SpaceFyne) ShowWelcome(client *spaceclientgo.SpaceClient, node *bcgo.No
 }
 
 func (f *SpaceFyne) ShowRegistrarSelectionDialog(client *spaceclientgo.SpaceClient, node *bcgo.Node) {
-	if f.Dialog != nil {
-		f.Dialog.Hide()
+	if d := f.Dialog; d != nil {
+		d.Hide()
 	}
 	l := ui.NewRegistrarList(func(id string, timestamp uint64, registrar *spacego.Registrar) {
 		u, err := url.Parse(fmt.Sprintf("https://%s/%s", registrar.Merchant.Domain, registrar.Merchant.RegisterUrl))
@@ -125,42 +125,42 @@ func (f *SpaceFyne) GetIcon() fyne.CanvasObject {
 // Add displays a dialog (write text, take a picture, upload an existing file or folder), and adds the result.
 func (f *SpaceFyne) Add(client *spaceclientgo.SpaceClient) {
 	composeText := widget.NewButtonWithIcon("Text", theme.DocumentCreateIcon(), func() {
-		if f.Dialog != nil {
-			f.Dialog.Hide()
+		if d := f.Dialog; d != nil {
+			d.Hide()
 		}
 		// TODO
 		f.ShowError(fmt.Errorf("Not yet implemented: %s %s", "SpaceFyne.Add", "Text"))
 	})
 	captureImage := widget.NewButtonWithIcon("Image", theme.NewThemedResource(data.CameraPhotoIcon, nil), func() {
-		if f.Dialog != nil {
-			f.Dialog.Hide()
+		if d := f.Dialog; d != nil {
+			d.Hide()
 		}
 		// TODO
 		f.ShowError(fmt.Errorf("Not yet implemented: %s %s", "SpaceFyne.Add", "Image"))
 	})
 	captureVideo := widget.NewButtonWithIcon("Video", theme.NewThemedResource(data.CameraVideoIcon, nil), func() {
-		if f.Dialog != nil {
-			f.Dialog.Hide()
+		if d := f.Dialog; d != nil {
+			d.Hide()
 		}
 		// TODO
 		f.ShowError(fmt.Errorf("Not yet implemented: %s %s", "SpaceFyne.Add", "Video"))
 	})
 	captureAudio := widget.NewButtonWithIcon("Audio", theme.NewThemedResource(data.MicrophoneIcon, nil), func() {
-		if f.Dialog != nil {
-			f.Dialog.Hide()
+		if d := f.Dialog; d != nil {
+			d.Hide()
 		}
 		// TODO
 		f.ShowError(fmt.Errorf("Not yet implemented: %s %s", "SpaceFyne.Add", "Audio"))
 	})
 	uploadFile := widget.NewButtonWithIcon("Document", theme.FileIcon(), func() {
-		if f.Dialog != nil {
-			f.Dialog.Hide()
+		if d := f.Dialog; d != nil {
+			d.Hide()
 		}
 		go f.ShowUploadFileDialog(client)
 	})
 	uploadFolder := widget.NewButtonWithIcon("Directory", theme.FolderIcon(), func() {
-		if f.Dialog != nil {
-			f.Dialog.Hide()
+		if d := f.Dialog; d != nil {
+			d.Hide()
 		}
 		go f.ShowUploadFolderDialog(client)
 	})
@@ -172,8 +172,8 @@ func (f *SpaceFyne) Add(client *spaceclientgo.SpaceClient) {
 		uploadFile,
 		uploadFolder,
 	)
-	if f.Dialog != nil {
-		f.Dialog.Hide()
+	if d := f.Dialog; d != nil {
+		d.Hide()
 	}
 	f.Dialog = dialog.NewCustom("Add", "Cancel", content, f.Window)
 	f.Dialog.Show()
@@ -262,8 +262,8 @@ func (f *SpaceFyne) ShowStorage(client *spaceclientgo.SpaceClient) {
 		return
 	}
 
-	if f.Dialog != nil {
-		f.Dialog.Hide()
+	if d := f.Dialog; d != nil {
+		d.Hide()
 	}
 	l := ui.NewProviderList(func(id string, registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription) {
 		// TODO
@@ -312,8 +312,8 @@ func (f *SpaceFyne) ShowUploadFileDialog(client *spaceclientgo.SpaceClient) {
 		}
 	}
 
-	if f.Dialog != nil {
-		f.Dialog.Hide()
+	if d := f.Dialog; d != nil {
+		d.Hide()
 	}
 	f.Dialog = dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
 		if err != nil {
@@ -362,8 +362,8 @@ func (f *SpaceFyne) ShowUploadFolderDialog(client *spaceclientgo.SpaceClient) {
 		}
 	}
 
-	if f.Dialog != nil {
-		f.Dialog.Hide()
+	if d := f.Dialog; d != nil {
+		d.Hide()
 	}
 	f.Dialog = dialog.NewFolderOpen(func(lister fyne.ListableURI, err error) {
 		if err != nil {

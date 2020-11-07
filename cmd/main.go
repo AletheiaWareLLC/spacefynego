@@ -87,6 +87,9 @@ func main() {
 		}
 		go l.Update(c, node)
 	}
+	f.OnSignedOut = func() {
+		go refreshList()
+	}
 
 	// Create a toolbar of common operations
 	t := widget.NewToolbar(

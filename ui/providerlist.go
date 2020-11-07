@@ -17,9 +17,7 @@
 package ui
 
 import (
-	"fmt"
 	"fyne.io/fyne"
-	"fyne.io/fyne/container"
 	"fyne.io/fyne/widget"
 	"github.com/AletheiaWareLLC/bcgo"
 	"github.com/AletheiaWareLLC/financego"
@@ -42,43 +40,7 @@ func NewProviderList(callback func(id string, registrar *spacego.Registrar, regi
 		subscriptions: make(map[string]*financego.Subscription),
 		List: widget.List{
 			CreateItem: func() fyne.CanvasObject {
-				return container.NewGridWithRows(2,
-					container.NewGridWithColumns(3,
-						&widget.Label{
-							Text:      "Template Object",
-							Alignment: fyne.TextAlignLeading,
-							TextStyle: fyne.TextStyle{
-								Bold: true,
-							},
-						},
-						&widget.Label{
-							Text:      "Template Object",
-							Alignment: fyne.TextAlignCenter,
-							TextStyle: fyne.TextStyle{
-								Monospace: true,
-							},
-							Wrapping: fyne.TextTruncate,
-						},
-						&widget.Label{
-							Text:      "Template Object",
-							Alignment: fyne.TextAlignTrailing,
-							TextStyle: fyne.TextStyle{
-								Monospace: true,
-							},
-							Wrapping: fyne.TextTruncate,
-						},
-					),
-					container.NewGridWithColumns(2,
-						&widget.Label{
-							Text:      "Template Object",
-							Alignment: fyne.TextAlignLeading,
-						},
-						&widget.Label{
-							Text:      "Template Object",
-							Alignment: fyne.TextAlignTrailing,
-						},
-					),
-				)
+				return widget.NewLabel("Template Object")
 			},
 		},
 	}
@@ -90,24 +52,11 @@ func NewProviderList(callback func(id string, registrar *spacego.Registrar, regi
 			return
 		}
 		i := l.ids[id]
-		var merchant *financego.Merchant
-		var service *financego.Service
-		r, ok := l.registrars[i]
-		if ok {
-			merchant = r.Merchant
-			service = r.Service
-			items := item.(*fyne.Container).Objects
-			top := items[0].(*fyne.Container).Objects
-			top[0].(*widget.Label).SetText(merchant.Alias)
-			top[1].(*widget.Label).SetText(service.Country)
-			top[2].(*widget.Label).SetText(fmt.Sprintf("%s / %s / %s",
-				bcgo.MoneyToString(service.Currency, service.GroupPrice),
-				bcgo.DecimalSizeToString(uint64(service.GroupSize)),
-				financego.IntervalToString(service.Interval)))
-			bottom := items[1].(*fyne.Container).Objects
-			bottom[0].(*widget.Label).SetText(l.registrations[i].CustomerId)
-			bottom[1].(*widget.Label).SetText(l.subscriptions[i].SubscriptionItemId)
+		var merchant string
+		if r, ok := l.registrars[i]; ok {
+			merchant = r.Merchant.Alias
 		}
+		item.(*widget.Label).SetText(merchant)
 	}
 	l.OnSelected = func(id widget.ListItemID) {
 		if id < 0 || id >= len(l.ids) {

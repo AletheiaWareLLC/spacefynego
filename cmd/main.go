@@ -21,6 +21,7 @@ import (
 	"fyne.io/fyne"
 	"fyne.io/fyne/app"
 	"fyne.io/fyne/container"
+	"fyne.io/fyne/dialog"
 	"fyne.io/fyne/theme"
 	"fyne.io/fyne/widget"
 	bcuidata "github.com/AletheiaWareLLC/bcfynego/ui/data"
@@ -71,6 +72,12 @@ func main() {
 			f.ShowError(err)
 			return
 		}
+
+		// Show progress dialog
+		progress := dialog.NewProgressInfinite("Refreshing", "Refreshing File Metadata List", f.Window)
+		progress.Show()
+		defer progress.Hide()
+
 		l.Update(c, n)
 	}
 

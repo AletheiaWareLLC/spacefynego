@@ -283,40 +283,7 @@ func (f *SpaceFyne) ShowStorage(client *spaceclientgo.SpaceClient) {
 	progress := dialog.NewProgressInfinite("Updating", "Getting Registrars", f.Window)
 	progress.Show()
 
-	list := ui.NewProviderList(func(id string, registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription) {
-		// Show detailed information
-		info := dialog.NewCustom(registrar.Merchant.Alias, "OK", widget.NewForm(
-			widget.NewFormItem("Domain", &widget.Label{
-				Text:     registrar.Merchant.Domain,
-				Wrapping: fyne.TextWrapBreak,
-			}),
-			widget.NewFormItem("Country", &widget.Label{
-				Text: registrar.Service.Country,
-			}),
-			widget.NewFormItem("Cost", &widget.Label{
-				Text: fmt.Sprintf("%s / %s / %s",
-					bcgo.MoneyToString(registrar.Service.Currency, registrar.Service.GroupPrice),
-					bcgo.DecimalSizeToString(uint64(registrar.Service.GroupSize)),
-					financego.IntervalToString(registrar.Service.Interval)),
-			}),
-			widget.NewFormItem("Customer", &widget.Label{
-				Text: registration.CustomerId,
-			}),
-			widget.NewFormItem("Subscription", &widget.Label{
-				Text: subscription.SubscriptionId,
-			}),
-			widget.NewFormItem("Subscription Item", &widget.Label{
-				Text: subscription.SubscriptionItemId,
-			}),
-			/* TODO
-			- Payment Methods
-			- Usage Records
-			- Invoices & Reciepts
-			*/
-		), f.Window)
-		info.Resize(fyne.NewSize(320, 320))
-		info.Show()
-	})
+	list := ui.NewProviderList(f.ShowRegistrarDialog)
 
 	// Update list
 	list.Update(client, node)
@@ -331,6 +298,41 @@ func (f *SpaceFyne) ShowStorage(client *spaceclientgo.SpaceClient) {
 	f.Dialog = dialog.NewCustom("Registrars", "OK", list, f.Window)
 	f.Dialog.Resize(fyne.NewSize(320, 320))
 	f.Dialog.Show()
+}
+
+func (f *SpaceFyne) ShowRegistrarDialog(id string, registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription) {
+	// Show detailed information
+	info := dialog.NewCustom(registrar.Merchant.Alias, "OK", widget.NewForm(
+		widget.NewFormItem("Domain", &widget.Label{
+			Text:     registrar.Merchant.Domain,
+			Wrapping: fyne.TextWrapBreak,
+		}),
+		widget.NewFormItem("Country", &widget.Label{
+			Text: registrar.Service.Country,
+		}),
+		widget.NewFormItem("Cost", &widget.Label{
+			Text: fmt.Sprintf("%s / %s / %s",
+				bcgo.MoneyToString(registrar.Service.Currency, registrar.Service.GroupPrice),
+				bcgo.DecimalSizeToString(uint64(registrar.Service.GroupSize)),
+				financego.IntervalToString(registrar.Service.Interval)),
+		}),
+		widget.NewFormItem("Customer", &widget.Label{
+			Text: registration.CustomerId,
+		}),
+		widget.NewFormItem("Subscription", &widget.Label{
+			Text: subscription.SubscriptionId,
+		}),
+		widget.NewFormItem("Subscription Item", &widget.Label{
+			Text: subscription.SubscriptionItemId,
+		}),
+		/* TODO
+		- Payment Methods
+		- Usage Records
+		- Invoices & Reciepts
+		*/
+	), f.Window)
+	info.Resize(fyne.NewSize(320, 320))
+	info.Show()
 }
 
 func (f *SpaceFyne) ShowHelp(client *spaceclientgo.SpaceClient) {

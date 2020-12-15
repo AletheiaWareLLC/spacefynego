@@ -122,7 +122,7 @@ func main() {
 	)
 
 	// Set window content, resize window, center window, show window, and run application
-	w.SetContent(container.NewBorder(t, nil, nil, nil, f.GetIcon(), t, l))
+	w.SetContent(container.NewBorder(t, nil, nil, nil, f.GetIcon(), l))
 	w.Resize(fyne.NewSize(600, 480))
 	w.CenterOnScreen()
 	w.ShowAndRun()

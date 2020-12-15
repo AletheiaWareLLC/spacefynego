@@ -201,7 +201,7 @@ func (f *SpaceFyne) ShowFile(client *spaceclientgo.SpaceClient, id string, times
 		return
 	}
 
-	view := viewer.GetViewer(meta, func(writer io.Writer) uint64 {
+	view := viewer.GetViewer(meta, func(writer io.Writer) int {
 
 		// Show progress dialog
 		progress := dialog.NewProgressInfinite("Loading", "Reading "+meta.Name, f.Window)
@@ -214,7 +214,7 @@ func (f *SpaceFyne) ShowFile(client *spaceclientgo.SpaceClient, id string, times
 			return 0
 		}
 
-		count, err := client.Read(node, hash, writer)
+		count, err := client.ReadFile(node, hash, writer)
 		if err != nil {
 			f.ShowError(err)
 			return 0

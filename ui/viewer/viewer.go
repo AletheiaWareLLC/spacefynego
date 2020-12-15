@@ -30,7 +30,7 @@ import (
 	"log"
 )
 
-func GetViewer(meta *spacego.Meta, callback func(io.Writer) uint64) fyne.CanvasObject {
+func GetViewer(meta *spacego.Meta, callback func(io.Writer) int) fyne.CanvasObject {
 	switch meta.GetType() {
 	case spacego.MIME_TYPE_TEXT_PLAIN:
 		return NewTextPlain(callback)
@@ -46,7 +46,7 @@ func GetViewer(meta *spacego.Meta, callback func(io.Writer) uint64) fyne.CanvasO
 	return nil
 }
 
-func NewTextPlain(callback func(io.Writer) uint64) fyne.CanvasObject {
+func NewTextPlain(callback func(io.Writer) int) fyne.CanvasObject {
 	// Create label to hold text
 	label := &widget.Label{
 		Wrapping: fyne.TextWrapWord,
@@ -67,7 +67,7 @@ func NewTextPlain(callback func(io.Writer) uint64) fyne.CanvasObject {
 	return scroller
 }
 
-func NewImage(callback func(io.Writer) uint64) fyne.CanvasObject {
+func NewImage(callback func(io.Writer) int) fyne.CanvasObject {
 	// Create image to hold image
 	img := &canvas.Image{
 		FillMode: canvas.ImageFillOriginal,

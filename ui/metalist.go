@@ -40,17 +40,10 @@ func NewMetaList(callback func(id string, timestamp uint64, meta *spacego.Meta))
 		timestamps: make(map[string]uint64),
 		List: widget.List{
 			CreateItem: func() fyne.CanvasObject {
-				return container.NewGridWithColumns(4,
+				return container.NewGridWithColumns(3,
 					&widget.Label{
 						TextStyle: fyne.TextStyle{
 							Bold: true,
-						},
-						Wrapping: fyne.TextTruncate,
-					},
-					&widget.Label{
-						Alignment: fyne.TextAlignTrailing,
-						TextStyle: fyne.TextStyle{
-							Monospace: true,
 						},
 						Wrapping: fyne.TextTruncate,
 					},
@@ -90,9 +83,8 @@ func NewMetaList(callback func(id string, timestamp uint64, meta *spacego.Meta))
 		}
 		items := item.(*fyne.Container).Objects
 		items[0].(*widget.Label).SetText(name)
-		items[1].(*widget.Label).SetText(bcgo.BinarySizeToString(m.Size))
-		items[2].(*widget.Label).SetText(m.Type)
-		items[3].(*widget.Label).SetText(bcgo.TimestampToString(l.timestamps[i]))
+		items[1].(*widget.Label).SetText(m.Type)
+		items[2].(*widget.Label).SetText(bcgo.TimestampToString(l.timestamps[i]))
 	}
 	l.OnSelected = func(id widget.ListItemID) {
 		if id < 0 || id >= len(l.ids) {

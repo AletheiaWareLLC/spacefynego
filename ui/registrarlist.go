@@ -44,28 +44,29 @@ func NewRegistrarList(callback func(id string, timestamp uint64, registrar *spac
 		timestamps: make(map[string]uint64),
 		List: widget.List{
 			CreateItem: func() fyne.CanvasObject {
-				return container.NewGridWithColumns(3,
+				return widget.NewVBox(
 					&widget.Label{
 						Alignment: fyne.TextAlignLeading,
 						TextStyle: fyne.TextStyle{
 							Bold: true,
 						},
 					},
-					&widget.Label{
-						Alignment: fyne.TextAlignCenter,
-						TextStyle: fyne.TextStyle{
-							Monospace: true,
+					container.NewGridWithColumns(2,
+						&widget.Label{
+							Alignment: fyne.TextAlignLeading,
+							TextStyle: fyne.TextStyle{
+								Monospace: true,
+							},
+							Wrapping: fyne.TextTruncate,
 						},
-						Wrapping: fyne.TextTruncate,
-					},
-					&widget.Label{
-						Alignment: fyne.TextAlignTrailing,
-						TextStyle: fyne.TextStyle{
-							Monospace: true,
+						&widget.Label{
+							Alignment: fyne.TextAlignTrailing,
+							TextStyle: fyne.TextStyle{
+								Monospace: true,
+							},
+							Wrapping: fyne.TextTruncate,
 						},
-						Wrapping: fyne.TextTruncate,
-					},
-				)
+					))
 			},
 		},
 	}
@@ -83,10 +84,11 @@ func NewRegistrarList(callback func(id string, timestamp uint64, registrar *spac
 		if ok {
 			merchant = r.Merchant
 			service = r.Service
-			items := item.(*fyne.Container).Objects
-			items[0].(*widget.Label).SetText(merchant.Alias)
-			items[1].(*widget.Label).SetText(service.Country)
-			items[2].(*widget.Label).SetText(fmt.Sprintf("%s / %s / %s",
+			box := item.(*widget.Box)
+			box.Children[0].(*widget.Label).SetText(merchant.Alias)
+			items := box.Children[1].(*fyne.Container).Objects
+			items[0].(*widget.Label).SetText(service.Country)
+			items[1].(*widget.Label).SetText(fmt.Sprintf("%s / %s / %s",
 				bcgo.MoneyToString(service.Currency, service.GroupPrice),
 				bcgo.DecimalSizeToString(uint64(service.GroupSize)),
 				financego.IntervalToString(service.Interval)))

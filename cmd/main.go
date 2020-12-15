@@ -45,7 +45,7 @@ func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	// Create Application
-	a := app.New()
+	a := app.NewWithID("com.aletheiaware.space")
 
 	// Create Window
 	w := a.NewWindow("S P A C E")
@@ -74,7 +74,7 @@ func main() {
 		}
 
 		// Show progress dialog
-		progress := dialog.NewProgressInfinite("Refreshing", "Refreshing File Metadata List", f.Window)
+		progress := dialog.NewProgressInfinite("Refreshing", "Refreshing File List", f.Window)
 		progress.Show()
 		defer progress.Hide()
 

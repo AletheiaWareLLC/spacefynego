@@ -117,13 +117,21 @@ func (f *SpaceFyne) ShowRegistrarSelectionDialog(client *spaceclientgo.SpaceClie
 		d.Hide()
 	}
 	f.Dialog = dialog.NewCustom("Registrars", "Done",
-		container.NewGridWithRows(3,
-			widget.NewLabel("Your encrypted data will be stored by your choice of storage providers."),
-			widget.NewLabel(fmt.Sprintf("Choose at least %d providers from the list below;", spacego.GetMinimumRegistrars())),
+		container.NewBorder(
+			&widget.Label{
+				Text:     "Your encrypted data will be stored by your choice of storage providers.",
+				Wrapping: fyne.TextWrapWord,
+			},
+			&widget.Label{
+				Text:     fmt.Sprintf("Choose at least %d providers from the list above.", spacego.GetMinimumRegistrars()),
+				Wrapping: fyne.TextWrapWord,
+			},
+			nil,
+			nil,
 			l,
 		),
 		f.Window)
-	f.Dialog.Resize(fyne.NewSize(0, 300))
+	f.Dialog.Resize(fyne.NewSize(400, 300))
 	f.Dialog.Show()
 }
 
@@ -236,41 +244,6 @@ func (f *SpaceFyne) ShowFile(client *spaceclientgo.SpaceClient, id string, times
 	window.CenterOnScreen()
 	window.Show()
 }
-
-// Adds file
-// - SpaceClient.Add(node *bcgo.Node, listener bcgo.MiningListener, name, mime string, reader io.Reader) (*bcgo.Reference, error)
-// Adds file using Remote Mining Service
-// - SpaceClient.AddRemote(node *bcgo.Node, domain, name, mime string, reader io.Reader) (*bcgo.Reference, error)
-// Get file owned by key with given hash
-// - SpaceClient.Get(node *bcgo.Node, recordHash []byte, callback MetaCallback) error
-// Get file shared to key with given hash
-// - SpaceClient.GetShared(node *bcgo.Node, recordHash []byte, callback MetaCallback) error
-// Get all files owned by key with given mime-type
-// - SpaceClient.GetAll(node *bcgo.Node, mime string, callback MetaCallback) error
-// Get all files shared to key with given mime-type
-// - SpaceClient.GetAllShared(node *bcgo.Node, mime string, callback MetaCallback) error
-// List files owned by key
-// - SpaceClient.List(node *bcgo.Node, callback MetaCallback) error
-// List files shared with key
-// - SpaceClient.ListShared(node *bcgo.Node, callback MetaCallback) error
-// Search files owned by key
-// - SpaceClient.Search(node *bcgo.Node, terms []string, callback MetaCallback) error
-// Search files shared with key
-// - SpaceClient.SearchShared(node *bcgo.Node, terms []string, callback MetaCallback) error
-// Read file by given hash
-// - SpaceClient.Read(node *bcgo.Node, recordHash []byte, writer io.Writer) (uint64, error)
-// Read file shared to key with given hash
-// - SpaceClient.ReadShared(node *bcgo.Node, recordHash []byte, writer io.Writer) (uint64, error)
-// Share file with recipients
-// - SpaceClient.Share(node *bcgo.Node, listener bcgo.MiningListener, recordHash []byte, recipients []string) error
-// Tag file owned by key
-// - SpaceClient.Tag(node *bcgo.Node, listener bcgo.MiningListener, recordHash []byte, tag []string) ([]*bcgo.Reference, error)
-// Tag file shared with key
-// - SpaceClient.TagShared(node *bcgo.Node, listener bcgo.MiningListener, recordHash []byte, tag []string) ([]*bcgo.Reference, error)
-// Get all tags for the file with the given hash
-// - SpaceClient.GetTag(node *bcgo.Node, recordHash []byte, callback func(entry *bcgo.BlockEntry, tag *spacego.Tag)) error
-// - SpaceClient.GetRegistration(merchant string, callback func(*financego.Registration) error) error
-// - SpaceClient.GetSubscription(merchant string, callback func(*financego.Subscription) error) error
 
 func (f *SpaceFyne) ShowStorage(client *spaceclientgo.SpaceClient) {
 	node, err := f.GetNode(&client.BCClient)

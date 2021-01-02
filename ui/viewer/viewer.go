@@ -17,11 +17,11 @@
 package viewer
 
 import (
+	"aletheiaware.com/spacego"
 	"bytes"
 	"fyne.io/fyne"
 	"fyne.io/fyne/canvas"
 	"fyne.io/fyne/widget"
-	"github.com/AletheiaWareLLC/spacego"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"

@@ -17,12 +17,12 @@
 package ui
 
 import (
+	"aletheiaware.com/bcgo"
+	"aletheiaware.com/financego"
+	"aletheiaware.com/spaceclientgo"
+	"aletheiaware.com/spacego"
 	"fyne.io/fyne"
 	"fyne.io/fyne/widget"
-	"github.com/AletheiaWareLLC/bcgo"
-	"github.com/AletheiaWareLLC/financego"
-	"github.com/AletheiaWareLLC/spaceclientgo"
-	"github.com/AletheiaWareLLC/spacego"
 )
 
 type ProviderList struct {

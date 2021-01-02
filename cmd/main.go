@@ -17,6 +17,13 @@
 package main
 
 import (
+	bcuidata "aletheiaware.com/bcfynego/ui/data"
+	"aletheiaware.com/bcgo"
+	"aletheiaware.com/spaceclientgo"
+	"aletheiaware.com/spacefynego"
+	"aletheiaware.com/spacefynego/ui"
+	"aletheiaware.com/spacefynego/ui/data"
+	"aletheiaware.com/spacego"
 	"flag"
 	"fyne.io/fyne"
 	"fyne.io/fyne/app"
@@ -24,13 +31,6 @@ import (
 	"fyne.io/fyne/dialog"
 	"fyne.io/fyne/theme"
 	"fyne.io/fyne/widget"
-	bcuidata "github.com/AletheiaWareLLC/bcfynego/ui/data"
-	"github.com/AletheiaWareLLC/bcgo"
-	"github.com/AletheiaWareLLC/spaceclientgo"
-	"github.com/AletheiaWareLLC/spacefynego"
-	"github.com/AletheiaWareLLC/spacefynego/ui"
-	"github.com/AletheiaWareLLC/spacefynego/ui/data"
-	"github.com/AletheiaWareLLC/spacego"
 	"log"
 	"os"
 )

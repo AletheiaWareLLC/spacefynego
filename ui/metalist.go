@@ -17,13 +17,13 @@
 package ui
 
 import (
+	"aletheiaware.com/bcgo"
+	"aletheiaware.com/spaceclientgo"
+	"aletheiaware.com/spacego"
 	"encoding/base64"
 	"fyne.io/fyne"
 	"fyne.io/fyne/container"
 	"fyne.io/fyne/widget"
-	"github.com/AletheiaWareLLC/bcgo"
-	"github.com/AletheiaWareLLC/spaceclientgo"
-	"github.com/AletheiaWareLLC/spacego"
 	"sort"
 )
 

@@ -17,12 +17,12 @@
 set -e
 set -x
 
-(cd $GOPATH/src/github.com/AletheiaWareLLC/spacefynego/ui/data/ && ./gen.sh)
-go fmt $GOPATH/src/github.com/AletheiaWareLLC/{spacefynego,spacefynego/...}
-go vet $GOPATH/src/github.com/AletheiaWareLLC/{spacefynego,spacefynego/...}
-go test $GOPATH/src/github.com/AletheiaWareLLC/{spacefynego,spacefynego/...}
+(cd $GOPATH/src/aletheiaware.com/spacefynego/ui/data/ && ./gen.sh)
+go fmt $GOPATH/src/aletheiaware.com/{spacefynego,spacefynego/...}
+go vet $GOPATH/src/aletheiaware.com/{spacefynego,spacefynego/...}
+go test $GOPATH/src/aletheiaware.com/{spacefynego,spacefynego/...}
 ANDROID_NDK_HOME=${ANDROID_HOME}/ndk-bundle/
-(cd $GOPATH/src/github.com/AletheiaWareLLC/spacefynego/cmd && fyne package -os android -appID com.aletheiaware.space -icon $GOPATH/src/github.com/AletheiaWareLLC/spacefynego/ui/data/logo.png -name SPACE_unaligned)
-(cd $GOPATH/src/github.com/AletheiaWareLLC/spacefynego/cmd && ${ANDROID_HOME}/build-tools/28.0.3/zipalign -f 4 SPACE_unaligned.apk SPACE.apk)
-(cd $GOPATH/src/github.com/AletheiaWareLLC/spacefynego/cmd && adb install -r -g SPACE.apk)
-(cd $GOPATH/src/github.com/AletheiaWareLLC/spacefynego/cmd && adb logcat -c && adb logcat | tee android.log)
+(cd $GOPATH/src/aletheiaware.com/spacefynego/cmd && fyne package -os android -appID com.aletheiaware.space -icon $GOPATH/src/aletheiaware.com/spacefynego/ui/data/logo.png -name SPACE_unaligned)
+(cd $GOPATH/src/aletheiaware.com/spacefynego/cmd && ${ANDROID_HOME}/build-tools/28.0.3/zipalign -f 4 SPACE_unaligned.apk SPACE.apk)
+(cd $GOPATH/src/aletheiaware.com/spacefynego/cmd && adb install -r -g SPACE.apk)
+(cd $GOPATH/src/aletheiaware.com/spacefynego/cmd && adb logcat -c && adb logcat | tee android.log)

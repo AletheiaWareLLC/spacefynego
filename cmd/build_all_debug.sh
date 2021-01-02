@@ -23,7 +23,7 @@ go vet $GOPATH/src/github.com/AletheiaWareLLC/spacefynego/...
 go test $GOPATH/src/github.com/AletheiaWareLLC/spacefynego/...
 mkdir -p fyne-cross/logs
 (fyne-cross android -app-id com.aletheiaware.space -debug -icon ./ui/data/logo.png -output SPACE_unaligned ./cmd/ >./fyne-cross/logs/android 2>&1 && cd $GOPATH/src/github.com/AletheiaWareLLC/spacefynego/fyne-cross/dist/android && ${ANDROID_HOME}/build-tools/28.0.3/zipalign -f 4 SPACE_unaligned.apk SPACE.apk) &
-#fyne-cross darwin -app-id com.aletheiaware.space -debug -icon ./ui/data/logo.png -output SPACE ./cmd/ >./fyne-cross/logs/darwin 2>&1 &
+fyne-cross darwin -app-id com.aletheiaware.space -debug -icon ./ui/data/logo.png -output SPACE ./cmd/ >./fyne-cross/logs/darwin 2>&1 &
 fyne-cross linux -app-id com.aletheiaware.space -debug -icon ./ui/data/logo.png -output space ./cmd/ >./fyne-cross/logs/linux 2>&1 &
 #fyne-cross windows -app-id com.aletheiaware.space -debug -icon ./ui/data/logo.png -output SPACE ./cmd/ >./fyne-cross/logs/windows 2>&1 &
 for job in `jobs -p`

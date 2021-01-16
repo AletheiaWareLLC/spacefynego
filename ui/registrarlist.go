@@ -102,6 +102,7 @@ func NewRegistrarList(callback func(id string, timestamp uint64, registrar *spac
 		if r, ok := l.registrars[i]; ok && callback != nil {
 			callback(i, l.timestamps[i], r)
 		}
+		l.Unselect(id) // TODO FIXME Hack
 	}
 	l.ExtendBaseWidget(l)
 	return l

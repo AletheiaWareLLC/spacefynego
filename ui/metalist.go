@@ -94,6 +94,7 @@ func NewMetaList(callback func(id string, timestamp uint64, meta *spacego.Meta))
 		if m, ok := l.metas[i]; ok && callback != nil {
 			callback(i, l.timestamps[i], m)
 		}
+		l.Unselect(id) // TODO FIXME Hack
 	}
 	l.ExtendBaseWidget(l)
 	return l

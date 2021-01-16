@@ -66,6 +66,7 @@ func NewProviderList(callback func(id string, registrar *spacego.Registrar, regi
 		if r, ok := l.registrars[i]; ok && callback != nil {
 			callback(i, r, l.registrations[i], l.subscriptions[i])
 		}
+		l.Unselect(id) // TODO FIXME Hack
 	}
 	l.ExtendBaseWidget(l)
 	return l

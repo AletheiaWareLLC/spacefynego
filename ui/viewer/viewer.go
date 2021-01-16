@@ -18,7 +18,6 @@ package viewer
 
 import (
 	"aletheiaware.com/spacego"
-	"bytes"
 	"fyne.io/fyne"
 	"fyne.io/fyne/canvas"
 	"fyne.io/fyne/widget"
@@ -27,13 +26,14 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"io"
+	"io/ioutil"
 	"log"
 )
 
-func GetViewer(meta *spacego.Meta, callback func(io.Writer) int) fyne.CanvasObject {
+func GetViewer(meta *spacego.Meta, source io.Reader) fyne.CanvasObject {
 	switch meta.GetType() {
 	case spacego.MIME_TYPE_TEXT_PLAIN:
-		return NewTextPlain(callback)
+		return NewTextPlain(source)
 	case spacego.MIME_TYPE_IMAGE_GIF:
 		fallthrough
 	case spacego.MIME_TYPE_IMAGE_JPEG:
@@ -41,12 +41,12 @@ func GetViewer(meta *spacego.Meta, callback func(io.Writer) int) fyne.CanvasObje
 		// TODO	case spacego.MIME_TYPE_IMAGE_SVG:
 		// TODO		fallthrough
 	case spacego.MIME_TYPE_IMAGE_PNG:
-		return NewImage(callback)
+		return NewImage(source)
 	}
 	return nil
 }
 
-func NewTextPlain(callback func(io.Writer) int) fyne.CanvasObject {
+func NewTextPlain(source io.Reader) fyne.CanvasObject {
 	// Create label to hold text
 	label := &widget.Label{
 		Wrapping: fyne.TextWrapWord,
@@ -55,19 +55,19 @@ func NewTextPlain(callback func(io.Writer) int) fyne.CanvasObject {
 
 	// Create goroutine to load file contents and update label
 	go func() {
-		var buffer bytes.Buffer
-		count := callback(&buffer)
-		log.Println("Count:", count)
-		if count > 0 {
-			label.SetText(buffer.String())
-			scroller.Refresh()
+		bytes, err := ioutil.ReadAll(source)
+		if err != nil {
+			log.Println("Error:", err)
+			return
 		}
+		label.SetText(string(bytes))
+		scroller.Refresh()
 	}()
 
 	return scroller
 }
 
-func NewImage(callback func(io.Writer) int) fyne.CanvasObject {
+func NewImage(source io.Reader) fyne.CanvasObject {
 	// Create image to hold image
 	img := &canvas.Image{
 		FillMode: canvas.ImageFillOriginal,
@@ -76,19 +76,14 @@ func NewImage(callback func(io.Writer) int) fyne.CanvasObject {
 
 	// Create goroutine to load file contents and update image
 	go func() {
-		var buffer bytes.Buffer
-		count := callback(&buffer)
-		log.Println("Count:", count)
-		if count > 0 {
-			i, _, err := image.Decode(&buffer)
-			if err != nil {
-				log.Println("Error:", err)
-				return
-			}
-			img.Image = i
-			img.Refresh()
-			scroller.Refresh()
+		i, _, err := image.Decode(source)
+		if err != nil {
+			log.Println("Error:", err)
+			return
 		}
+		img.Image = i
+		img.Refresh()
+		scroller.Refresh()
 	}()
 
 	return scroller

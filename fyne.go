@@ -27,16 +27,18 @@ import (
 	"aletheiaware.com/spacefynego/ui/viewer"
 	"aletheiaware.com/spacego"
 	"encoding/base64"
+	"errors"
 	"fmt"
-	"fyne.io/fyne"
-	"fyne.io/fyne/canvas"
-	"fyne.io/fyne/container"
-	"fyne.io/fyne/dialog"
-	"fyne.io/fyne/storage"
-	"fyne.io/fyne/theme"
-	"fyne.io/fyne/widget"
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/storage"
+	"fyne.io/fyne/v2/theme"
+	"fyne.io/fyne/v2/widget"
 	"log"
 	"net/url"
+	"strings"
 )
 
 type SpaceFyne struct {
@@ -46,9 +48,6 @@ type SpaceFyne struct {
 func NewSpaceFyne(a fyne.App, w fyne.Window, c *spaceclientgo.SpaceClient) *SpaceFyne {
 	f := &SpaceFyne{
 		BCFyne: *bcfynego.NewBCFyne(a, w),
-	}
-	f.OnKeysImported = func(alias string) {
-		// TODO show success dialog, and tell the user to sign in with their newly-imported alias, and password
 	}
 	f.OnSignedIn = func(node *bcgo.Node) {
 		count := 0
@@ -82,6 +81,7 @@ func (f *SpaceFyne) ShowWelcome(client *spaceclientgo.SpaceClient, node *bcgo.No
 		},
 		f.Window)
 	f.Dialog.Show()
+	f.Dialog.Resize(bcui.DialogSize)
 }
 
 func (f *SpaceFyne) ShowRegistrarSelectionDialog(client *spaceclientgo.SpaceClient, node *bcgo.Node) {
@@ -130,8 +130,8 @@ func (f *SpaceFyne) ShowRegistrarSelectionDialog(client *spaceclientgo.SpaceClie
 			l,
 		),
 		f.Window)
-	f.Dialog.Resize(fyne.NewSize(400, 300))
 	f.Dialog.Show()
+	f.Dialog.Resize(bcui.DialogSize)
 }
 
 func (f *SpaceFyne) GetIcon() fyne.CanvasObject {
@@ -172,23 +172,23 @@ func (f *SpaceFyne) Add(client *spaceclientgo.SpaceClient) {
 		if d := f.Dialog; d != nil {
 			d.Hide()
 		}
-		f.ShowAddTextDialog(client, node)
+		f.ShowComposeTextDialog(client, node)
 	})
-	captureImage := widget.NewButtonWithIcon("Image", theme.NewThemedResource(data.CameraPhotoIcon, nil), func() {
+	captureImage := widget.NewButtonWithIcon("Image", theme.NewThemedResource(data.CameraPhotoIcon), func() {
 		if d := f.Dialog; d != nil {
 			d.Hide()
 		}
 		// TODO
 		f.ShowError(fmt.Errorf("Not yet implemented: %s %s", "SpaceFyne.Add", "Image"))
 	})
-	captureVideo := widget.NewButtonWithIcon("Video", theme.NewThemedResource(data.CameraVideoIcon, nil), func() {
+	captureVideo := widget.NewButtonWithIcon("Video", theme.NewThemedResource(data.CameraVideoIcon), func() {
 		if d := f.Dialog; d != nil {
 			d.Hide()
 		}
 		// TODO
 		f.ShowError(fmt.Errorf("Not yet implemented: %s %s", "SpaceFyne.Add", "Video"))
 	})
-	captureAudio := widget.NewButtonWithIcon("Audio", theme.NewThemedResource(data.MicrophoneIcon, nil), func() {
+	captureAudio := widget.NewButtonWithIcon("Audio", theme.NewThemedResource(data.MicrophoneIcon), func() {
 		if d := f.Dialog; d != nil {
 			d.Hide()
 		}
@@ -262,7 +262,7 @@ func (f *SpaceFyne) ShowFile(client *spaceclientgo.SpaceClient, id string, times
 	}
 	window := f.App.NewWindow(fmt.Sprintf("%s - %s - %s", bcgo.TimestampToString(timestamp), name, id[:8]))
 	window.SetContent(view)
-	window.Resize(fyne.NewSize(800, 600))
+	window.Resize(bcui.WindowSize)
 	window.CenterOnScreen()
 	window.Show()
 }
@@ -291,8 +291,8 @@ func (f *SpaceFyne) ShowStorage(client *spaceclientgo.SpaceClient) {
 	}
 	// Show registrar list
 	f.Dialog = dialog.NewCustom("Registrars", "OK", list, f.Window)
-	f.Dialog.Resize(fyne.NewSize(320, 320))
 	f.Dialog.Show()
+	f.Dialog.Resize(bcui.DialogSize)
 }
 
 func (f *SpaceFyne) ShowRegistrarDialog(id string, registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription) {
@@ -326,17 +326,49 @@ func (f *SpaceFyne) ShowRegistrarDialog(id string, registrar *spacego.Registrar,
 		- Invoices & Reciepts
 		*/
 	), f.Window)
-	info.Resize(fyne.NewSize(320, 320))
 	info.Show()
+	info.Resize(bcui.DialogSize)
 }
 
 func (f *SpaceFyne) ShowHelp(client *spaceclientgo.SpaceClient) {
 	f.ShowError(fmt.Errorf("Not yet implemented: %s", "SpaceFyne.ShowHelp"))
 }
 
-// ShowAddNoteDialog displays a dialog for creating a note, and adds the resulting file.
-func (f *SpaceFyne) ShowAddTextDialog(client *spaceclientgo.SpaceClient, node *bcgo.Node) {
-	// TODO
+// ShowComposeTextDialog displays a dialog for creating a note, and adds the resulting file.
+func (f *SpaceFyne) ShowComposeTextDialog(client *spaceclientgo.SpaceClient, node *bcgo.Node) {
+	title := widget.NewEntry()
+	title.Validator = func(s string) error {
+		if s == "" {
+			return errors.New("Title cannot be empty")
+		}
+		return nil
+	}
+	content := widget.NewMultiLineEntry()
+	items := []*widget.FormItem{
+		widget.NewFormItem("Title", title),
+		widget.NewFormItem("Content", content),
+	}
+	f.Dialog = dialog.NewForm("Compose", "Save", "Cancel", items, func(b bool) {
+		if !b {
+			return
+		}
+		name := title.Text
+
+		// Show progress dialog
+		progress := dialog.NewProgress("Uploading", "Uploading "+name, f.Window)
+		progress.Show()
+		defer progress.Hide()
+		listener := &bcui.ProgressMiningListener{Func: progress.SetValue}
+
+		reference, err := client.Add(node, listener, name, spacego.MIME_TYPE_TEXT_PLAIN, strings.NewReader(content.Text))
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		log.Println("Uploaded:", reference)
+	}, f.Window)
+	f.Dialog.Show()
+	f.Dialog.Resize(bcui.DialogSize)
 }
 
 // ShowUploadFileDialog displays a file picker, and adds the resulting file.
@@ -352,6 +384,7 @@ func (f *SpaceFyne) ShowUploadFileDialog(client *spaceclientgo.SpaceClient, node
 		f.UploadFile(client, node, reader)
 	}, f.Window)
 	f.Dialog.Show()
+	f.Dialog.Resize(bcui.DialogSize)
 }
 
 // ShowUploadFolderDialog displays a folder picker, and adds the resulting folder.
@@ -367,16 +400,18 @@ func (f *SpaceFyne) ShowUploadFolderDialog(client *spaceclientgo.SpaceClient, no
 		f.UploadFolder(client, node, lister)
 	}, f.Window)
 	f.Dialog.Show()
+	f.Dialog.Resize(bcui.DialogSize)
 }
 
 func (f *SpaceFyne) UploadFile(client *spaceclientgo.SpaceClient, node *bcgo.Node, file fyne.URIReadCloser) {
+	name := file.URI().Name()
 	// Show progress dialog
-	progress := dialog.NewProgress("Uploading", "Uploading "+file.Name(), f.Window)
+	progress := dialog.NewProgress("Uploading", "Uploading "+name, f.Window)
 	progress.Show()
 	defer progress.Hide()
 	listener := &bcui.ProgressMiningListener{Func: progress.SetValue}
 
-	reference, err := client.Add(node, listener, file.Name(), file.URI().MimeType(), file)
+	reference, err := client.Add(node, listener, name, file.URI().MimeType(), file)
 	if err != nil {
 		f.ShowError(err)
 	}

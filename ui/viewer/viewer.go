@@ -18,9 +18,10 @@ package viewer
 
 import (
 	"aletheiaware.com/spacego"
-	"fyne.io/fyne"
-	"fyne.io/fyne/canvas"
-	"fyne.io/fyne/widget"
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/widget"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
@@ -51,7 +52,7 @@ func NewTextPlain(source io.Reader) fyne.CanvasObject {
 	label := &widget.Label{
 		Wrapping: fyne.TextWrapWord,
 	}
-	scroller := widget.NewVScrollContainer(label)
+	scroller := container.NewVScroll(label)
 
 	// Create goroutine to load file contents and update label
 	go func() {
@@ -72,7 +73,7 @@ func NewImage(source io.Reader) fyne.CanvasObject {
 	img := &canvas.Image{
 		FillMode: canvas.ImageFillOriginal,
 	}
-	scroller := widget.NewScrollContainer(img)
+	scroller := container.NewScroll(img)
 
 	// Create goroutine to load file contents and update image
 	go func() {

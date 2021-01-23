@@ -23,9 +23,9 @@ import (
 	"aletheiaware.com/spacego"
 	"encoding/base64"
 	"fmt"
-	"fyne.io/fyne"
-	"fyne.io/fyne/container"
-	"fyne.io/fyne/widget"
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/widget"
 	"github.com/golang/protobuf/proto"
 	"log"
 	"sort"
@@ -44,7 +44,7 @@ func NewRegistrarList(callback func(id string, timestamp uint64, registrar *spac
 		timestamps: make(map[string]uint64),
 		List: widget.List{
 			CreateItem: func() fyne.CanvasObject {
-				return widget.NewVBox(
+				return container.NewVBox(
 					&widget.Label{
 						Alignment: fyne.TextAlignLeading,
 						TextStyle: fyne.TextStyle{
@@ -84,9 +84,9 @@ func NewRegistrarList(callback func(id string, timestamp uint64, registrar *spac
 		if ok {
 			merchant = r.Merchant
 			service = r.Service
-			box := item.(*widget.Box)
-			box.Children[0].(*widget.Label).SetText(merchant.Alias)
-			items := box.Children[1].(*fyne.Container).Objects
+			box := item.(*fyne.Container)
+			box.Objects[0].(*widget.Label).SetText(merchant.Alias)
+			items := box.Objects[1].(*fyne.Container).Objects
 			items[0].(*widget.Label).SetText(service.Country)
 			items[1].(*widget.Label).SetText(fmt.Sprintf("%s / %s / %s",
 				bcgo.MoneyToString(service.Currency, service.GroupPrice),

@@ -4,7 +4,7 @@
     <!-- TODO FIXME OKSVG doesn't support percentages <rect fill="black" stroke="black" width="100%" height="100%"/> -->
     <rect fill="black" stroke="black" width="288" height="48"/>
     <!-- Lines -->
-    <g fill="none" stroke="white" stroke-linecap="butt" stroke-linejoin="bevel" stroke-width="0.5">
+    <g fill="none" stroke="white" stroke-linecap="butt" stroke-linejoin="bevel" stroke-width="1">
         <!-- Guides -->
         <!--
             <polyline points="24,0 24,48" />

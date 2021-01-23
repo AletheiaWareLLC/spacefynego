@@ -21,8 +21,8 @@ import (
 	"aletheiaware.com/financego"
 	"aletheiaware.com/spaceclientgo"
 	"aletheiaware.com/spacego"
-	"fyne.io/fyne"
-	"fyne.io/fyne/widget"
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/widget"
 )
 
 type ProviderList struct {

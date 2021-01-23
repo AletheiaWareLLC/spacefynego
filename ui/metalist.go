@@ -21,9 +21,9 @@ import (
 	"aletheiaware.com/spaceclientgo"
 	"aletheiaware.com/spacego"
 	"encoding/base64"
-	"fyne.io/fyne"
-	"fyne.io/fyne/container"
-	"fyne.io/fyne/widget"
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/widget"
 	"sort"
 )
 

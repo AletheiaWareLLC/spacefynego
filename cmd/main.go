@@ -17,6 +17,7 @@
 package main
 
 import (
+	bcui "aletheiaware.com/bcfynego/ui"
 	bcuidata "aletheiaware.com/bcfynego/ui/data"
 	"aletheiaware.com/bcgo"
 	"aletheiaware.com/spaceclientgo"
@@ -25,12 +26,11 @@ import (
 	"aletheiaware.com/spacefynego/ui/data"
 	"aletheiaware.com/spacego"
 	"flag"
-	"fyne.io/fyne"
-	"fyne.io/fyne/app"
-	"fyne.io/fyne/container"
-	"fyne.io/fyne/dialog"
-	"fyne.io/fyne/theme"
-	"fyne.io/fyne/widget"
+	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/theme"
+	"fyne.io/fyne/v2/widget"
 	"log"
 )
 
@@ -104,10 +104,10 @@ func main() {
 			go f.SearchFile(c)
 		}),
 		widget.NewToolbarSpacer(),
-		widget.NewToolbarAction(theme.NewThemedResource(data.StorageIcon, nil), func() {
+		widget.NewToolbarAction(theme.NewThemedResource(data.StorageIcon), func() {
 			go f.ShowStorage(c)
 		}),
-		widget.NewToolbarAction(bcuidata.NewPrimaryThemedResource(bcuidata.AccountIcon), func() {
+		widget.NewToolbarAction(theme.NewThemedResource(bcuidata.AccountIcon), func() {
 			go f.ShowAccount(&c.BCClient)
 		}),
 		widget.NewToolbarAction(theme.HelpIcon(), func() {
@@ -116,8 +116,8 @@ func main() {
 	)
 
 	// Set window content, resize window, center window, show window, and run application
-	w.SetContent(container.NewBorder(t, nil, nil, nil, f.GetIcon(), l))
-	w.Resize(fyne.NewSize(600, 480))
+	w.SetContent(container.NewBorder(t, nil, nil, nil, l))
+	w.Resize(bcui.WindowSize)
 	w.CenterOnScreen()
 	w.ShowAndRun()
 }

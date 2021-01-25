@@ -89,7 +89,7 @@ func main() {
 		go l.Update(c, node)
 	}
 	f.OnSignedOut = func() {
-		go refreshList()
+		go l.Clear()
 	}
 
 	// Create a toolbar of common operations

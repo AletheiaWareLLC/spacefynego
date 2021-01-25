@@ -113,6 +113,11 @@ func (l *MetaList) Add(entry *bcgo.BlockEntry, meta *spacego.Meta) error {
 	return nil
 }
 
+func (l *MetaList) Clear() {
+	l.ids = nil
+	l.Refresh()
+}
+
 func (l *MetaList) Update(client *spaceclientgo.SpaceClient, node *bcgo.Node) error {
 	if err := client.List(node, l.Add); err != nil {
 		return err

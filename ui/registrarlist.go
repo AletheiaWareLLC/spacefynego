@@ -21,27 +21,28 @@ import (
 	"aletheiaware.com/financego"
 	"aletheiaware.com/spaceclientgo"
 	"aletheiaware.com/spacego"
-	"encoding/base64"
 	"fmt"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
-	"github.com/golang/protobuf/proto"
-	"log"
 	"sort"
 )
 
 type RegistrarList struct {
 	widget.List
-	ids        []string
-	registrars map[string]*spacego.Registrar
-	timestamps map[string]uint64
+	ids           []string
+	registrars    map[string]*spacego.Registrar
+	timestamps    map[string]uint64
+	registrations map[string]*financego.Registration
+	subscriptions map[string]*financego.Subscription
 }
 
-func NewRegistrarList(callback func(id string, timestamp uint64, registrar *spacego.Registrar)) *RegistrarList {
+func NewRegistrarList(callback func(id string, timestamp uint64, registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription)) *RegistrarList {
 	l := &RegistrarList{
-		registrars: make(map[string]*spacego.Registrar),
-		timestamps: make(map[string]uint64),
+		registrars:    make(map[string]*spacego.Registrar),
+		timestamps:    make(map[string]uint64),
+		registrations: make(map[string]*financego.Registration),
+		subscriptions: make(map[string]*financego.Subscription),
 		List: widget.List{
 			CreateItem: func() fyne.CanvasObject {
 				return container.NewVBox(
@@ -78,20 +79,24 @@ func NewRegistrarList(callback func(id string, timestamp uint64, registrar *spac
 			return
 		}
 		i := l.ids[id]
-		var merchant *financego.Merchant
-		var service *financego.Service
 		r, ok := l.registrars[i]
 		if ok {
-			merchant = r.Merchant
-			service = r.Service
 			box := item.(*fyne.Container)
-			box.Objects[0].(*widget.Label).SetText(merchant.Alias)
+			box.Objects[0].(*widget.Label).SetText(r.Merchant.Alias)
 			items := box.Objects[1].(*fyne.Container).Objects
-			items[0].(*widget.Label).SetText(service.Country)
-			items[1].(*widget.Label).SetText(fmt.Sprintf("%s / %s / %s",
-				bcgo.MoneyToString(service.Currency, service.GroupPrice),
-				bcgo.DecimalSizeToString(uint64(service.GroupSize)),
-				financego.IntervalToString(service.Interval)))
+			if _, ok := l.registrations[i]; ok {
+				items[0].(*widget.Label).SetText("Registered")
+			} else {
+				items[0].(*widget.Label).SetText(r.Service.Country)
+			}
+			if _, ok := l.subscriptions[i]; ok {
+				items[1].(*widget.Label).SetText("Subscribed")
+			} else {
+				items[1].(*widget.Label).SetText(fmt.Sprintf("%s / %s / %s",
+					bcgo.MoneyToString(r.Service.Currency, r.Service.GroupPrice),
+					bcgo.DecimalSizeToString(uint64(r.Service.GroupSize)),
+					financego.IntervalToString(r.Service.Interval)))
+			}
 		}
 	}
 	l.OnSelected = func(id widget.ListItemID) {
@@ -100,7 +105,7 @@ func NewRegistrarList(callback func(id string, timestamp uint64, registrar *spac
 		}
 		i := l.ids[id]
 		if r, ok := l.registrars[i]; ok && callback != nil {
-			callback(i, l.timestamps[i], r)
+			callback(i, l.timestamps[i], r, l.registrations[i], l.subscriptions[i])
 		}
 		l.Unselect(id) // TODO FIXME Hack
 	}
@@ -108,38 +113,40 @@ func NewRegistrarList(callback func(id string, timestamp uint64, registrar *spac
 	return l
 }
 
-func (l *RegistrarList) Add(entry *bcgo.BlockEntry, registrar *spacego.Registrar) error {
-	id := base64.RawURLEncoding.EncodeToString(entry.RecordHash)
+func (l *RegistrarList) AddRegistrar(entry *bcgo.BlockEntry, registrar *spacego.Registrar) error {
+	id := registrar.Merchant.Alias
 	if _, ok := l.registrars[id]; !ok {
 		l.registrars[id] = registrar
 		l.timestamps[id] = entry.Record.Timestamp
 		l.ids = append(l.ids, id)
-		sort.Slice(l.ids, func(i, j int) bool {
-			return l.timestamps[l.ids[i]] < l.timestamps[l.ids[j]]
-		})
 	}
 	return nil
 }
 
+func (l *RegistrarList) AddRegistration(entry *bcgo.BlockEntry, registration *financego.Registration) error {
+	l.registrations[registration.MerchantAlias] = registration
+	return nil
+}
+
+func (l *RegistrarList) AddSubscription(entry *bcgo.BlockEntry, subscription *financego.Subscription) error {
+	l.subscriptions[subscription.MerchantAlias] = subscription
+	return nil
+}
+
 func (l *RegistrarList) Update(client *spaceclientgo.SpaceClient, node *bcgo.Node) error {
-	registrars := node.GetOrOpenChannel(spacego.SPACE_REGISTRAR, func() *bcgo.Channel {
-		return spacego.OpenRegistrarChannel()
-	})
-	if err := registrars.Refresh(node.Cache, node.Network); err != nil {
-		log.Println(err)
-	}
-	if err := bcgo.Read(registrars.Name, registrars.Head, nil, node.Cache, node.Network, "", nil, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
-		// Unmarshal as Registrar
-		r := &spacego.Registrar{}
-		err := proto.Unmarshal(data, r)
-		if err != nil {
-			return err
-		}
-		l.Add(entry, r)
-		return nil
-	}); err != nil {
+	if err := spacego.GetAllRegistrars(node, l.AddRegistrar); err != nil {
 		return err
 	}
+	if err := spacego.GetAllRegistrationsForNode(node, l.AddRegistration); err != nil {
+		return err
+	}
+	if err := spacego.GetAllSubscriptionsForNode(node, l.AddSubscription); err != nil {
+		return err
+	}
+	sort.Slice(l.ids, func(i, j int) bool {
+		// TODO sort registrations and subscriptions first
+		return l.timestamps[l.ids[i]] < l.timestamps[l.ids[j]]
+	})
 	l.Refresh()
 	return nil
 }

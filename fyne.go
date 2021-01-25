@@ -18,10 +18,12 @@ package spacefynego
 
 import (
 	"aletheiaware.com/bcfynego"
+	bcstorage "aletheiaware.com/bcfynego/storage"
 	bcui "aletheiaware.com/bcfynego/ui"
 	"aletheiaware.com/bcgo"
 	"aletheiaware.com/financego"
 	"aletheiaware.com/spaceclientgo"
+	"aletheiaware.com/spacefynego/storage"
 	"aletheiaware.com/spacefynego/ui"
 	"aletheiaware.com/spacefynego/ui/data"
 	"aletheiaware.com/spacefynego/ui/viewer"
@@ -33,7 +35,7 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/storage"
+	fynestorage "fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"log"
@@ -50,8 +52,12 @@ func NewSpaceFyne(a fyne.App, w fyne.Window, c *spaceclientgo.SpaceClient) *Spac
 		BCFyne: *bcfynego.NewBCFyne(a, w),
 	}
 	f.OnSignedIn = func(node *bcgo.Node) {
+		// Create BC Repository
+		bcstorage.NewBCRepository(&c.BCClient).Register()
+		// Create Space Repository
+		storage.NewSpaceRepository(c, node).Register()
 		count := 0
-		if err := c.GetRegistrarsForNode(node, func(*spacego.Registrar, *financego.Registration, *financego.Subscription) error {
+		if err := spacego.GetAllSubscriptionsForNode(node, func(*bcgo.BlockEntry, *financego.Subscription) error {
 			count++
 			return nil
 		}); err != nil {
@@ -93,19 +99,37 @@ func (f *SpaceFyne) ShowRegistrarSelectionDialog(client *spaceclientgo.SpaceClie
 	f.Dialog = dialog.NewProgressInfinite("Updating", "Getting Registrars", f.Window)
 	f.Dialog.Show()
 
-	l := ui.NewRegistrarList(func(id string, timestamp uint64, registrar *spacego.Registrar) {
-		u, err := url.Parse(fmt.Sprintf("https://%s/%s", registrar.Merchant.Domain, registrar.Merchant.RegisterUrl))
-		if err != nil {
-			f.ShowError(err)
-			return
-		}
-		params := url.Values{}
-		params.Add("alias", node.Alias)
-		params.Add("next", registrar.Service.SubscribeUrl)
-		u.RawQuery = params.Encode()
-		if err := f.App.OpenURL(u); err != nil {
-			f.ShowError(err)
-			return
+	l := ui.NewRegistrarList(func(id string, timestamp uint64, registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription) {
+		if registration == nil {
+			u, err := url.Parse(fmt.Sprintf("https://%s/%s", registrar.Merchant.Domain, registrar.Merchant.RegisterUrl))
+			if err != nil {
+				f.ShowError(err)
+				return
+			}
+			params := url.Values{}
+			params.Add("alias", node.Alias)
+			params.Add("next", registrar.Service.SubscribeUrl)
+			u.RawQuery = params.Encode()
+			if err := f.App.OpenURL(u); err != nil {
+				f.ShowError(err)
+				return
+			}
+		} else if subscription == nil {
+			u, err := url.Parse(fmt.Sprintf("https://%s/%s", registrar.Merchant.Domain, registrar.Service.SubscribeUrl))
+			if err != nil {
+				f.ShowError(err)
+				return
+			}
+			params := url.Values{}
+			params.Add("alias", node.Alias)
+			params.Add("customerId", registration.CustomerId)
+			u.RawQuery = params.Encode()
+			if err := f.App.OpenURL(u); err != nil {
+				f.ShowError(err)
+				return
+			}
+		} else {
+			f.ShowRegistrarDialog(id, timestamp, registrar, registration, subscription)
 		}
 	})
 
@@ -118,13 +142,10 @@ func (f *SpaceFyne) ShowRegistrarSelectionDialog(client *spaceclientgo.SpaceClie
 	f.Dialog = dialog.NewCustom("Registrars", "Done",
 		container.NewBorder(
 			&widget.Label{
-				Text:     "Your encrypted data will be stored by your choice of storage providers.",
+				Text:     fmt.Sprintf("Your encrypted data will be stored by your choice of storage providers.\nWe recommend choosing at least %d registrars from the list below - the more you choose, the more resilient your data will be against the unexpected.", spacego.GetMinimumRegistrars()),
 				Wrapping: fyne.TextWrapWord,
 			},
-			&widget.Label{
-				Text:     fmt.Sprintf("Choose at least %d providers from the list above.", spacego.GetMinimumRegistrars()),
-				Wrapping: fyne.TextWrapWord,
-			},
+			nil,
 			nil,
 			nil,
 			l,
@@ -278,7 +299,7 @@ func (f *SpaceFyne) ShowStorage(client *spaceclientgo.SpaceClient) {
 	progress := dialog.NewProgressInfinite("Updating", "Getting Registrars", f.Window)
 	progress.Show()
 
-	list := ui.NewProviderList(f.ShowRegistrarDialog)
+	list := ui.NewRegistrarList(f.ShowRegistrarDialog)
 
 	// Update list
 	list.Update(client, node)
@@ -295,7 +316,7 @@ func (f *SpaceFyne) ShowStorage(client *spaceclientgo.SpaceClient) {
 	f.Dialog.Resize(bcui.DialogSize)
 }
 
-func (f *SpaceFyne) ShowRegistrarDialog(id string, registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription) {
+func (f *SpaceFyne) ShowRegistrarDialog(id string, timestamp uint64, registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription) {
 	// Show detailed information
 	info := dialog.NewCustom(registrar.Merchant.Alias, "OK", widget.NewForm(
 		widget.NewFormItem("Domain", &widget.Label{
@@ -362,7 +383,7 @@ func (f *SpaceFyne) ShowComposeTextDialog(client *spaceclientgo.SpaceClient, nod
 
 		reference, err := client.Add(node, listener, name, spacego.MIME_TYPE_TEXT_PLAIN, strings.NewReader(content.Text))
 		if err != nil {
-			log.Println(err)
+			f.ShowError(err)
 			return
 		}
 		log.Println("Uploaded:", reference)
@@ -414,6 +435,7 @@ func (f *SpaceFyne) UploadFile(client *spaceclientgo.SpaceClient, node *bcgo.Nod
 	reference, err := client.Add(node, listener, name, file.URI().MimeType(), file)
 	if err != nil {
 		f.ShowError(err)
+		return
 	}
 	log.Println("Uploaded:", reference)
 }
@@ -440,13 +462,13 @@ func (f *SpaceFyne) UploadFolder(client *spaceclientgo.SpaceClient, node *bcgo.N
 			continue
 		}
 		// Check if URI points to Folder
-		if lister, err := storage.ListerForURI(uri); err == nil {
+		if lister, err := fynestorage.ListerForURI(uri); err == nil {
 			f.UploadFolder(client, node, lister)
 			continue
 		}
 
 		// URI points to File
-		file, err := storage.OpenFileFromURI(uri)
+		file, err := fynestorage.OpenFileFromURI(uri)
 		if err != nil {
 			log.Println(err)
 			continue
@@ -462,7 +484,7 @@ func (f *SpaceFyne) getRegistrarDomainsForNode(client *spaceclientgo.SpaceClient
 			net = n
 		}
 	}
-	err = client.GetRegistrarsForNode(node, func(registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription) error {
+	err = spacego.GetAllRegistrarsForNode(node, func(registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription) error {
 		if registrar != nil && registration != nil && subscription != nil {
 			domain := registrar.Merchant.Domain
 			if domain == "" {

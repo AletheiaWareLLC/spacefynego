@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2020 Aletheia Ware LLC
+# Copyright 2020-2021 Aletheia Ware LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,8 +17,6 @@
 set -e
 set -x
 
-(cd $GOPATH/src/aletheiaware.com/spacefynego/ui/data/ && ./gen.sh)
 go fmt $GOPATH/src/aletheiaware.com/spacefynego/...
-go vet $GOPATH/src/aletheiaware.com/spacefynego/...
 go test $GOPATH/src/aletheiaware.com/spacefynego/...
-go run -tags mobile aletheiaware.com/spacefynego/cmd $@
+go build -o $GOPATH/bin/spacefynego aletheiaware.com/spacefynego/cmd/spacefyne

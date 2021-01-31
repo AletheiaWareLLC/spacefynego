@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2020 Aletheia Ware LLC
+# Copyright 2020-2021 Aletheia Ware LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,8 +21,4 @@ set -x
 go fmt $GOPATH/src/aletheiaware.com/spacefynego/...
 go vet $GOPATH/src/aletheiaware.com/spacefynego/...
 go test $GOPATH/src/aletheiaware.com/spacefynego/...
-fyne-cross android -app-id com.aletheiaware.space -app-version 1.0.1 -icon ./ui/data/logo.png -keystore=./private/SPACE.keystore -output SPACE -release ./cmd/
-fyne-cross darwin -app-id com.aletheiaware.space -app-version 1.0.1 -icon ./ui/data/logo.png -output SPACE -release ./cmd/
-fyne-cross ios -app-id com.aletheiaware.space -app-version 1.0.1 -icon ./ui/data/logo.png -output SPACE -release ./cmd/
-fyne-cross linux -app-id com.aletheiaware.space -app-version 1.0.1 -icon ./ui/data/logo.png -output space -release ./cmd/
-fyne-cross windows -app-id com.aletheiaware.space -app-version 1.0.1 -icon ./ui/data/logo.png -output space -release ./cmd/
+go run -tags mobile aletheiaware.com/spacefynego/cmd/spacefyne $@

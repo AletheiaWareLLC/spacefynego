@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright 2020 Aletheia Ware LLC
+# Copyright 2020-2021 Aletheia Ware LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ go fmt $GOPATH/src/aletheiaware.com/{spacefynego,spacefynego/...}
 go vet $GOPATH/src/aletheiaware.com/{spacefynego,spacefynego/...}
 go test $GOPATH/src/aletheiaware.com/{spacefynego,spacefynego/...}
 ANDROID_NDK_HOME=${ANDROID_HOME}/ndk-bundle/
-(cd $GOPATH/src/aletheiaware.com/spacefynego/cmd && fyne package -os android -appID com.aletheiaware.space -icon $GOPATH/src/aletheiaware.com/spacefynego/ui/data/logo.png -name SPACE_unaligned)
-(cd $GOPATH/src/aletheiaware.com/spacefynego/cmd && ${ANDROID_HOME}/build-tools/28.0.3/zipalign -f 4 SPACE_unaligned.apk SPACE.apk)
-(cd $GOPATH/src/aletheiaware.com/spacefynego/cmd && adb install -r -g SPACE.apk)
-(cd $GOPATH/src/aletheiaware.com/spacefynego/cmd && adb logcat -c && adb logcat | tee android.log)
+(cd $GOPATH/src/aletheiaware.com/spacefynego/cmd/spacefyne && fyne package -os android -appID com.aletheiaware.space -icon $GOPATH/src/aletheiaware.com/spacefynego/ui/data/logo.png -name SPACE_unaligned)
+(cd $GOPATH/src/aletheiaware.com/spacefynego/cmd/spacefyne && ${ANDROID_HOME}/build-tools/28.0.3/zipalign -f 4 SPACE_unaligned.apk SPACE.apk)
+(cd $GOPATH/src/aletheiaware.com/spacefynego/cmd/spacefyne && adb install -r -g SPACE.apk)
+(cd $GOPATH/src/aletheiaware.com/spacefynego/cmd/spacefyne && adb logcat -c && adb logcat | tee android.log)

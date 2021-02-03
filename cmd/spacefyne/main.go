@@ -60,13 +60,7 @@ func main() {
 		go f.ShowFile(c, id, timestamp, meta)
 	})
 
-	refreshList := func() {
-		n, err := f.GetNode(&c.BCClient)
-		if err != nil {
-			f.ShowError(err)
-			return
-		}
-
+	refreshListWithNode := func(n *bcgo.Node) {
 		// Show progress dialog
 		progress := dialog.NewProgressInfinite("Refreshing", "Refreshing File List", f.Window)
 		progress.Show()
@@ -75,18 +69,24 @@ func main() {
 		l.Update(c, n)
 	}
 
+	refreshList := func() {
+		n, err := f.GetNode(&c.BCClient)
+		if err != nil {
+			f.ShowError(err)
+			return
+		}
+		refreshListWithNode(n)
+	}
+
 	// Populate list in goroutine
 	go refreshList()
 
-	f.OnKeysImported = func(alias string) {
-		go refreshList()
-	}
 	onSignedIn := f.OnSignedIn
 	f.OnSignedIn = func(node *bcgo.Node) {
 		if onSignedIn != nil {
 			onSignedIn(node)
 		}
-		go l.Update(c, node)
+		go refreshListWithNode(node)
 	}
 	f.OnSignedOut = func() {
 		go l.Clear()

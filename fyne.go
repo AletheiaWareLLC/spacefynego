@@ -99,39 +99,7 @@ func (f *SpaceFyne) ShowRegistrarSelectionDialog(client *spaceclientgo.SpaceClie
 	f.Dialog = dialog.NewProgressInfinite("Updating", "Getting Registrars", f.Window)
 	f.Dialog.Show()
 
-	l := ui.NewRegistrarList(func(id string, timestamp uint64, registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription) {
-		if registration == nil {
-			u, err := url.Parse(fmt.Sprintf("https://%s/%s", registrar.Merchant.Domain, registrar.Merchant.RegisterUrl))
-			if err != nil {
-				f.ShowError(err)
-				return
-			}
-			params := url.Values{}
-			params.Add("alias", node.Alias)
-			params.Add("next", registrar.Service.SubscribeUrl)
-			u.RawQuery = params.Encode()
-			if err := f.App.OpenURL(u); err != nil {
-				f.ShowError(err)
-				return
-			}
-		} else if subscription == nil {
-			u, err := url.Parse(fmt.Sprintf("https://%s/%s", registrar.Merchant.Domain, registrar.Service.SubscribeUrl))
-			if err != nil {
-				f.ShowError(err)
-				return
-			}
-			params := url.Values{}
-			params.Add("alias", node.Alias)
-			params.Add("customerId", registration.CustomerId)
-			u.RawQuery = params.Encode()
-			if err := f.App.OpenURL(u); err != nil {
-				f.ShowError(err)
-				return
-			}
-		} else {
-			f.ShowRegistrarDialog(id, timestamp, registrar, registration, subscription)
-		}
-	})
+	l := ui.NewRegistrarList(f.ShowRegistrarDialog(client, node))
 
 	// Update list
 	l.Update(client, node)
@@ -299,7 +267,7 @@ func (f *SpaceFyne) ShowStorage(client *spaceclientgo.SpaceClient) {
 	progress := dialog.NewProgressInfinite("Updating", "Getting Registrars", f.Window)
 	progress.Show()
 
-	list := ui.NewRegistrarList(f.ShowRegistrarDialog)
+	list := ui.NewRegistrarList(f.ShowRegistrarDialog(client, node))
 
 	// Update list
 	list.Update(client, node)
@@ -316,39 +284,80 @@ func (f *SpaceFyne) ShowStorage(client *spaceclientgo.SpaceClient) {
 	f.Dialog.Resize(bcui.DialogSize)
 }
 
-func (f *SpaceFyne) ShowRegistrarDialog(id string, timestamp uint64, registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription) {
-	// Show detailed information
-	info := dialog.NewCustom(registrar.Merchant.Alias, "OK", widget.NewForm(
-		widget.NewFormItem("Domain", &widget.Label{
-			Text:     registrar.Merchant.Domain,
-			Wrapping: fyne.TextWrapBreak,
-		}),
-		widget.NewFormItem("Country", &widget.Label{
-			Text: registrar.Service.Country,
-		}),
-		widget.NewFormItem("Cost", &widget.Label{
-			Text: fmt.Sprintf("%s / %s / %s",
-				bcgo.MoneyToString(registrar.Service.Currency, registrar.Service.GroupPrice),
-				bcgo.DecimalSizeToString(uint64(registrar.Service.GroupSize)),
-				financego.IntervalToString(registrar.Service.Interval)),
-		}),
-		widget.NewFormItem("Customer", &widget.Label{
-			Text: registration.CustomerId,
-		}),
-		widget.NewFormItem("Subscription", &widget.Label{
-			Text: subscription.SubscriptionId,
-		}),
-		widget.NewFormItem("Subscription Item", &widget.Label{
-			Text: subscription.SubscriptionItemId,
-		}),
-		/* TODO
-		- Payment Methods
-		- Usage Records
-		- Invoices & Reciepts
-		*/
-	), f.Window)
-	info.Show()
-	info.Resize(bcui.DialogSize)
+func (f *SpaceFyne) ShowRegistrarDialog(client *spaceclientgo.SpaceClient, node *bcgo.Node) func(id string, timestamp uint64, registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription) {
+	return func(id string, timestamp uint64, registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription) {
+		form := widget.NewForm(
+			widget.NewFormItem("Domain", &widget.Label{
+				Text:     registrar.Merchant.Domain,
+				Wrapping: fyne.TextWrapBreak,
+			}),
+			widget.NewFormItem("Country", &widget.Label{
+				Text: registrar.Service.Country,
+			}),
+			widget.NewFormItem("Cost", &widget.Label{
+				Text: fmt.Sprintf("%s / %s / %s",
+					bcgo.MoneyToString(registrar.Service.Currency, registrar.Service.GroupPrice),
+					bcgo.DecimalSizeToString(uint64(registrar.Service.GroupSize)),
+					financego.IntervalToString(registrar.Service.Interval)),
+			}),
+		)
+		if registration != nil {
+			form.Append("Customer", &widget.Label{
+				Text: registration.CustomerId,
+			})
+		} else {
+			form.Append("", widget.NewButton("Register", func() {
+				u, err := url.Parse(fmt.Sprintf("https://%s/%s", registrar.Merchant.Domain, registrar.Merchant.RegisterUrl))
+				if err != nil {
+					f.ShowError(err)
+					return
+				}
+				params := url.Values{}
+				params.Add("alias", node.Alias)
+				params.Add("next", registrar.Service.SubscribeUrl)
+				u.RawQuery = params.Encode()
+				if err := f.App.OpenURL(u); err != nil {
+					f.ShowError(err)
+					return
+				}
+			}))
+		}
+		if subscription != nil {
+			form.Append("Subscription", &widget.Label{
+				Text: subscription.SubscriptionId,
+			})
+			form.Append("Subscription Item", &widget.Label{
+				Text: subscription.SubscriptionItemId,
+			})
+
+			/* TODO
+			- Payment Methods
+			- Usage Records
+			- Invoices & Reciepts
+			*/
+		} else if registration != nil {
+			form.Append("", widget.NewButton("Subscribe", func() {
+				u, err := url.Parse(fmt.Sprintf("https://%s/%s", registrar.Merchant.Domain, registrar.Service.SubscribeUrl))
+				if err != nil {
+					f.ShowError(err)
+					return
+				}
+				params := url.Values{}
+				params.Add("alias", node.Alias)
+				params.Add("customerId", registration.CustomerId)
+				u.RawQuery = params.Encode()
+				if err := f.App.OpenURL(u); err != nil {
+					f.ShowError(err)
+					return
+				}
+			}))
+		}
+
+		// Show detailed information
+		info := dialog.NewCustom(registrar.Merchant.Alias, "OK", form, f.Window)
+		info.Show()
+		info.Resize(bcui.DialogSize)
+	}
 }
 
 func (f *SpaceFyne) ShowHelp(client *spaceclientgo.SpaceClient) {

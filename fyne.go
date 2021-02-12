@@ -233,17 +233,21 @@ func (f *SpaceFyne) ShowFile(client *spaceclientgo.SpaceClient, id string, times
 		return
 	}
 
-	reader, err := client.ReadFile(node, hash)
-	if err != nil {
-		f.ShowError(err)
-		return
-	}
-
-	view := viewer.GetViewer(meta, reader)
+	view := viewer.ForMime(meta.GetType())
 	if view == nil {
 		f.ShowError(fmt.Errorf("Not yet implemented: %s %s", "SpaceFyne.ShowFile", meta.Type))
 		return
 	}
+
+	// Create goroutine to load file contents and update viewer
+	go func() {
+		reader, err := client.ReadFile(node, hash)
+		if err != nil {
+			f.ShowError(err)
+			return
+		}
+		view.SetSource(reader)
+	}()
 
 	name := meta.Name
 	if name == "" {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Aletheia Ware LLC
+ * Copyright 2020-2021 Aletheia Ware LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,22 +19,18 @@ package viewer
 import (
 	"aletheiaware.com/spacego"
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/canvas"
-	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/widget"
-	"image"
-	_ "image/gif"
-	_ "image/jpeg"
-	_ "image/png"
 	"io"
-	"io/ioutil"
-	"log"
 )
 
-func GetViewer(meta *spacego.Meta, source io.Reader) fyne.CanvasObject {
-	switch meta.GetType() {
+type Viewer interface {
+	fyne.CanvasObject
+	SetSource(io.Reader)
+}
+
+func ForMime(mime string) Viewer {
+	switch mime {
 	case spacego.MIME_TYPE_TEXT_PLAIN:
-		return NewTextPlain(source)
+		return NewTextPlainViewer()
 	case spacego.MIME_TYPE_IMAGE_GIF:
 		fallthrough
 	case spacego.MIME_TYPE_IMAGE_JPEG:
@@ -42,50 +38,7 @@ func GetViewer(meta *spacego.Meta, source io.Reader) fyne.CanvasObject {
 		// TODO	case spacego.MIME_TYPE_IMAGE_SVG:
 		// TODO		fallthrough
 	case spacego.MIME_TYPE_IMAGE_PNG:
-		return NewImage(source)
+		return NewImageViewer()
 	}
 	return nil
-}
-
-func NewTextPlain(source io.Reader) fyne.CanvasObject {
-	// Create label to hold text
-	label := &widget.Label{
-		Wrapping: fyne.TextWrapWord,
-	}
-	scroller := container.NewVScroll(label)
-
-	// Create goroutine to load file contents and update label
-	go func() {
-		bytes, err := ioutil.ReadAll(source)
-		if err != nil {
-			log.Println("Error:", err)
-			return
-		}
-		label.SetText(string(bytes))
-		scroller.Refresh()
-	}()
-
-	return scroller
-}
-
-func NewImage(source io.Reader) fyne.CanvasObject {
-	// Create image to hold image
-	img := &canvas.Image{
-		FillMode: canvas.ImageFillOriginal,
-	}
-	scroller := container.NewScroll(img)
-
-	// Create goroutine to load file contents and update image
-	go func() {
-		i, _, err := image.Decode(source)
-		if err != nil {
-			log.Println("Error:", err)
-			return
-		}
-		img.Image = i
-		img.Refresh()
-		scroller.Refresh()
-	}()
-
-	return scroller
 }

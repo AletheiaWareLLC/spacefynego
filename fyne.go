@@ -38,6 +38,7 @@ import (
 	fynestorage "fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"io"
 	"log"
 	"net/url"
 	"strings"
@@ -91,18 +92,22 @@ func (f *SpaceFyne) ShowWelcome(client *spaceclientgo.SpaceClient, node *bcgo.No
 }
 
 func (f *SpaceFyne) ShowRegistrarSelectionDialog(client *spaceclientgo.SpaceClient, node *bcgo.Node) {
-	if d := f.Dialog; d != nil {
-		d.Hide()
-	}
-
 	// Show progress dialog
-	f.Dialog = dialog.NewProgressInfinite("Updating", "Getting Registrars", f.Window)
-	f.Dialog.Show()
+	progress := dialog.NewProgressInfinite("Updating", "Getting Registrars", f.Window)
+	progress.Show()
 
-	l := ui.NewRegistrarList(f.ShowRegistrarDialog(client, node))
+	list := ui.NewRegistrarList(f.ShowRegistrarDialog(client, node))
 
 	// Update list
-	l.Update(client, node)
+	err := list.Update(client, node)
+
+	// Hide progress dialog
+	progress.Hide()
+
+	if err != nil {
+		f.ShowError(fmt.Errorf("Error updating registrar list: %s", err))
+		return
+	}
 
 	if d := f.Dialog; d != nil {
 		d.Hide()
@@ -116,7 +121,7 @@ func (f *SpaceFyne) ShowRegistrarSelectionDialog(client *spaceclientgo.SpaceClie
 			nil,
 			nil,
 			nil,
-			l,
+			list,
 		),
 		f.Window)
 	f.Dialog.Show()
@@ -137,26 +142,23 @@ func (f *SpaceFyne) Add(client *spaceclientgo.SpaceClient) {
 		return
 	}
 
-	if d := f.Dialog; d != nil {
-		d.Hide()
-	}
 	// Show progress dialog
-	f.Dialog = dialog.NewProgressInfinite("Updating", "Getting Registrars", f.Window)
-	f.Dialog.Show()
+	progress := dialog.NewProgressInfinite("Updating", "Getting Registrars", f.Window)
+	progress.Show()
 
 	domains, err := f.getRegistrarDomainsForNode(client, node)
 	if err != nil {
 		log.Println(err)
 	}
 
+	// Hide progress dialog
+	progress.Hide()
+
 	if len(domains) == 0 {
 		f.ShowRegistrarSelectionDialog(client, node)
 		return
 	}
 
-	if d := f.Dialog; d != nil {
-		d.Hide()
-	}
 	composeText := widget.NewButtonWithIcon("Text", theme.DocumentCreateIcon(), func() {
 		if d := f.Dialog; d != nil {
 			d.Hide()
@@ -225,6 +227,7 @@ func (f *SpaceFyne) ShowFile(client *spaceclientgo.SpaceClient, id string, times
 	// Show progress dialog
 	progress := dialog.NewProgressInfinite("Loading", "Reading "+meta.Name, f.Window)
 	progress.Show()
+	// Hide progress dialog
 	defer progress.Hide()
 
 	hash, err := base64.RawURLEncoding.DecodeString(id)
@@ -274,14 +277,20 @@ func (f *SpaceFyne) ShowStorage(client *spaceclientgo.SpaceClient) {
 	list := ui.NewRegistrarList(f.ShowRegistrarDialog(client, node))
 
 	// Update list
-	list.Update(client, node)
+	err = list.Update(client, node)
 
 	// Hide progress dialog
 	progress.Hide()
 
+	if err != nil {
+		f.ShowError(fmt.Errorf("Error updating registrar list: %s", err))
+		return
+	}
+
 	if d := f.Dialog; d != nil {
 		d.Hide()
 	}
+
 	// Show registrar list
 	f.Dialog = dialog.NewCustom("Registrars", "OK", list, f.Window)
 	f.Dialog.Show()
@@ -391,10 +400,13 @@ func (f *SpaceFyne) ShowComposeTextDialog(client *spaceclientgo.SpaceClient, nod
 		// Show progress dialog
 		progress := dialog.NewProgress("Uploading", "Uploading "+name, f.Window)
 		progress.Show()
-		defer progress.Hide()
 		listener := &bcui.ProgressMiningListener{Func: progress.SetValue}
 
 		reference, err := client.Add(node, listener, name, spacego.MIME_TYPE_TEXT_PLAIN, strings.NewReader(content.Text))
+
+		// Hide progress dialog
+		progress.Hide()
+
 		if err != nil {
 			f.ShowError(err)
 			return
@@ -437,15 +449,17 @@ func (f *SpaceFyne) ShowUploadFolderDialog(client *spaceclientgo.SpaceClient, no
 	f.Dialog.Resize(bcui.DialogSize)
 }
 
-func (f *SpaceFyne) UploadFile(client *spaceclientgo.SpaceClient, node *bcgo.Node, file fyne.URIReadCloser) {
-	name := file.URI().Name()
+func (f *SpaceFyne) UploadFile(client *spaceclientgo.SpaceClient, node *bcgo.Node, name, mime string, reader io.Reader) {
 	// Show progress dialog
 	progress := dialog.NewProgress("Uploading", "Uploading "+name, f.Window)
 	progress.Show()
-	defer progress.Hide()
 	listener := &bcui.ProgressMiningListener{Func: progress.SetValue}
 
-	reference, err := client.Add(node, listener, name, file.URI().MimeType(), file)
+	reference, err := client.Add(node, listener, name, mime, reader)
+
+	// Hide progress dialog
+	progress.Hide()
+
 	if err != nil {
 		f.ShowError(err)
 		return
@@ -464,6 +478,7 @@ func (f *SpaceFyne) UploadFolder(client *spaceclientgo.SpaceClient, node *bcgo.N
 	// Show progress dialog
 	progress := dialog.NewProgress("Uploading", "Uploading "+folder.Name(), f.Window)
 	progress.Show()
+	// Hide progress dialog
 	defer progress.Hide()
 
 	for i, uri := range uris {
@@ -486,7 +501,7 @@ func (f *SpaceFyne) UploadFolder(client *spaceclientgo.SpaceClient, node *bcgo.N
 			log.Println(err)
 			continue
 		}
-		f.UploadFile(client, node, file)
+		f.UploadFile(client, node, uri.Name(), uri.MimeType(), file)
 	}
 }
 
@@ -503,11 +518,8 @@ func (f *SpaceFyne) getRegistrarDomainsForNode(client *spaceclientgo.SpaceClient
 			if domain == "" {
 				domain = registrar.Merchant.Alias
 			}
-			// Add any missing domains to network
 			if net != nil {
-				if _, ok := net.Peers[domain]; !ok {
-					net.Peers[domain] = 0
-				}
+				net.AddPeer(domain)
 			}
 			domains = append(domains, domain)
 		}

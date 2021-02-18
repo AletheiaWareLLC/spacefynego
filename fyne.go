@@ -28,6 +28,7 @@ import (
 	"aletheiaware.com/spacefynego/ui/data"
 	"aletheiaware.com/spacefynego/ui/viewer"
 	"aletheiaware.com/spacego"
+	"bytes"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -38,7 +39,9 @@ import (
 	fynestorage "fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"image/color"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/url"
 	"strings"
@@ -434,7 +437,59 @@ func (f *SpaceFyne) ShowUploadFileDialog(client *spaceclientgo.SpaceClient, node
 		if reader == nil {
 			return
 		}
-		f.UploadFile(client, node, reader)
+
+		// Show confirmation dialog so user can see preview and change name, mime, etc.
+		uri := reader.URI()
+		name := widget.NewEntry()
+		name.SetText(uri.Name())
+		mime := widget.NewSelect(spacego.GetMimeTypes(), nil)
+		mime.Selected = uri.MimeType()
+		size := widget.NewLabel("0bytes")
+		prop := canvas.NewRectangle(color.Transparent)
+		prop.SetMinSize(fyne.NewSize(200, 200))
+		noPreview := widget.NewLabel("No Preview")
+		preview := container.NewMax(prop, noPreview)
+		form := widget.NewForm(
+			widget.NewFormItem("Name", name),
+			widget.NewFormItem("Type", mime),
+			widget.NewFormItem("Size", size),
+			widget.NewFormItem("Preview", preview),
+		)
+
+		var buffer []byte
+		loadPreview := func(mime string) {
+			if view, err := viewer.ForMime(mime); err != nil || view == nil {
+				preview.Objects[1] = noPreview
+			} else {
+				preview.Objects[1] = view
+				// Load file contents and update viewer
+				if err := view.SetSource(bytes.NewReader(buffer)); err != nil {
+					log.Println(err)
+				}
+			}
+			form.Refresh()
+		}
+		mime.OnChanged = func(mime string) {
+			go loadPreview(mime)
+		}
+
+		go func() {
+			buffer, err = ioutil.ReadAll(reader)
+			if err != nil {
+				f.ShowError(err)
+				return
+			}
+			size.SetText(bcgo.BinarySizeToString(uint64(len(buffer))))
+			loadPreview(mime.Selected)
+		}()
+
+		f.Dialog = dialog.NewCustomConfirm("Upload File", "Upload", "Cancel", form, func(result bool) {
+			if result {
+				f.UploadFile(client, node, name.Text, mime.Selected, bytes.NewReader(buffer))
+			}
+		}, f.Window)
+		f.Dialog.Show()
+		f.Dialog.Resize(bcui.DialogSize)
 	}, f.Window)
 	f.Dialog.Show()
 	f.Dialog.Resize(bcui.DialogSize)
@@ -481,6 +536,8 @@ func (f *SpaceFyne) UploadFolder(client *spaceclientgo.SpaceClient, node *bcgo.N
 		return
 	}
 	count := len(uris)
+
+	// TODO show confirmation dialog which lists the files to be uploaded so the user can select/deselect
 
 	// Show progress dialog
 	progress := dialog.NewProgress("Uploading", "Uploading "+folder.Name(), f.Window)

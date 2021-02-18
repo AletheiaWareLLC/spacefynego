@@ -17,41 +17,82 @@
 package viewer
 
 import (
+	"aletheiaware.com/spacego"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 	"io"
 	"io/ioutil"
-	"log"
 )
+
+func init() {
+	Register(spacego.MIME_TYPE_TEXT_PLAIN, func() (Viewer, error) {
+		return NewTextPlainViewer(), nil
+	})
+}
 
 type TextPlainViewer struct {
 	widget.BaseWidget
-	label    *widget.Label
-	scroller *container.Scroll
+	text string
 }
 
 func NewTextPlainViewer() *TextPlainViewer {
 	v := &TextPlainViewer{}
-	// Create label to hold text
-	v.label = &widget.Label{
-		Wrapping: fyne.TextWrapWord,
-	}
-	v.scroller = container.NewVScroll(v.label)
 	v.ExtendBaseWidget(v)
 	return v
 }
 
 func (v *TextPlainViewer) CreateRenderer() fyne.WidgetRenderer {
-	return v.scroller.CreateRenderer()
+	v.ExtendBaseWidget(v)
+	r := &textPlainViewerRenderer{
+		viewer: v,
+		label: &widget.Label{
+			Wrapping: fyne.TextWrapWord,
+		},
+	}
+	r.scroller = container.NewVScroll(r.label)
+	r.objects = []fyne.CanvasObject{r.scroller}
+	return r
 }
 
-func (v *TextPlainViewer) SetSource(source io.Reader) {
+func (v *TextPlainViewer) MinSize() fyne.Size {
+	v.ExtendBaseWidget(v)
+	return v.BaseWidget.MinSize()
+}
+
+func (v *TextPlainViewer) SetSource(source io.Reader) error {
 	bytes, err := ioutil.ReadAll(source)
 	if err != nil {
-		log.Println("Error:", err)
-		return
+		return err
 	}
-	v.label.SetText(string(bytes))
-	v.scroller.Refresh()
+	v.text = string(bytes)
+	v.Refresh()
+	return nil
+}
+
+type textPlainViewerRenderer struct {
+	viewer   *TextPlainViewer
+	label    *widget.Label
+	scroller *container.Scroll
+	objects  []fyne.CanvasObject
+}
+
+func (r *textPlainViewerRenderer) Destroy() {}
+
+func (r *textPlainViewerRenderer) Layout(size fyne.Size) {
+	r.scroller.Resize(size)
+}
+
+func (r *textPlainViewerRenderer) MinSize() fyne.Size {
+	return r.scroller.MinSize()
+}
+
+func (r *textPlainViewerRenderer) Objects() []fyne.CanvasObject {
+	return r.objects
+}
+
+func (r *textPlainViewerRenderer) Refresh() {
+	r.label.Text = r.viewer.text
+	r.label.Refresh()
+	r.scroller.Refresh()
 }

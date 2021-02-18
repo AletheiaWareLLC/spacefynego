@@ -236,7 +236,11 @@ func (f *SpaceFyne) ShowFile(client *spaceclientgo.SpaceClient, id string, times
 		return
 	}
 
-	view := viewer.ForMime(meta.GetType())
+	view, err := viewer.ForMime(meta.GetType())
+	if err != nil {
+		f.ShowError(err)
+		return
+	}
 	if view == nil {
 		f.ShowError(fmt.Errorf("Not yet implemented: %s %s", "SpaceFyne.ShowFile", meta.Type))
 		return
@@ -249,7 +253,10 @@ func (f *SpaceFyne) ShowFile(client *spaceclientgo.SpaceClient, id string, times
 			f.ShowError(err)
 			return
 		}
-		view.SetSource(reader)
+		if err := view.SetSource(reader); err != nil {
+			f.ShowError(err)
+			return
+		}
 	}()
 
 	name := meta.Name

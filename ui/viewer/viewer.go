@@ -17,28 +17,34 @@
 package viewer
 
 import (
-	"aletheiaware.com/spacego"
+	"fmt"
 	"fyne.io/fyne/v2"
 	"io"
+	"strings"
 )
 
+// generatorTable stores the mapping of mime types to generators of Viewers.
+var generatorTable map[string]func() (Viewer, error) = map[string]func() (Viewer, error){}
+
+// Viewer represents a fyne.CanvasObject that can view a file.
 type Viewer interface {
 	fyne.CanvasObject
-	SetSource(io.Reader)
+	SetSource(io.Reader) error
 }
 
-func ForMime(mime string) Viewer {
-	switch mime {
-	case spacego.MIME_TYPE_TEXT_PLAIN:
-		return NewTextPlainViewer()
-	case spacego.MIME_TYPE_IMAGE_GIF:
-		fallthrough
-	case spacego.MIME_TYPE_IMAGE_JPEG:
-		fallthrough
-		// TODO	case spacego.MIME_TYPE_IMAGE_SVG:
-		// TODO		fallthrough
-	case spacego.MIME_TYPE_IMAGE_PNG:
-		return NewImageViewer()
+// Register registers a function that can generate a generator.
+func Register(mime string, generator func() (Viewer, error)) {
+	generatorTable[strings.ToLower(mime)] = generator
+}
+
+// ForMime returns the Viewer instance which is registered to handle URIs
+// of the given mime.
+func ForMime(mime string) (Viewer, error) {
+	generator, ok := generatorTable[strings.ToLower(mime)]
+
+	if !ok {
+		return nil, fmt.Errorf("no generator registered for mime '%s'", mime)
 	}
-	return nil
+
+	return generator()
 }

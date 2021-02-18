@@ -17,6 +17,7 @@
 package viewer
 
 import (
+	"aletheiaware.com/spacego"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
@@ -26,37 +27,81 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"io"
-	"log"
 )
+
+func init() {
+	generator := func() (Viewer, error) {
+		return NewImageViewer(), nil
+	}
+	Register(spacego.MIME_TYPE_IMAGE_GIF, generator)
+	Register(spacego.MIME_TYPE_IMAGE_JPEG, generator)
+	Register(spacego.MIME_TYPE_IMAGE_JPG, generator)
+	// TODO	Register(spacego.MIME_TYPE_IMAGE_SVG, generator)
+	Register(spacego.MIME_TYPE_IMAGE_PNG, generator)
+}
 
 type ImageViewer struct {
 	widget.BaseWidget
-	img      *canvas.Image
-	scroller *container.Scroll
+	img image.Image
 }
 
 func NewImageViewer() *ImageViewer {
 	v := &ImageViewer{}
-	// Create image to hold image
-	v.img = &canvas.Image{
-		FillMode: canvas.ImageFillOriginal,
-	}
-	v.scroller = container.NewScroll(v.img)
 	v.ExtendBaseWidget(v)
 	return v
 }
 
 func (v *ImageViewer) CreateRenderer() fyne.WidgetRenderer {
-	return v.scroller.CreateRenderer()
+	v.ExtendBaseWidget(v)
+	r := &imageViewerRenderer{
+		viewer: v,
+		img: &canvas.Image{
+			FillMode: canvas.ImageFillOriginal,
+		},
+	}
+	r.scroller = container.NewScroll(r.img)
+	r.objects = []fyne.CanvasObject{r.scroller}
+	return r
 }
 
-func (v *ImageViewer) SetSource(source io.Reader) {
+func (v *ImageViewer) MinSize() fyne.Size {
+	v.ExtendBaseWidget(v)
+	return v.BaseWidget.MinSize()
+}
+
+func (v *ImageViewer) SetSource(source io.Reader) error {
 	i, _, err := image.Decode(source)
 	if err != nil {
-		log.Println("Error:", err)
-		return
+		return err
 	}
-	v.img.Image = i
-	v.img.Refresh()
-	v.scroller.Refresh()
+	v.img = i
+	v.Refresh()
+	return nil
+}
+
+type imageViewerRenderer struct {
+	viewer   *ImageViewer
+	img      *canvas.Image
+	scroller *container.Scroll
+	objects  []fyne.CanvasObject
+}
+
+func (r *imageViewerRenderer) Destroy() {}
+
+func (r *imageViewerRenderer) Layout(size fyne.Size) {
+	r.scroller.Resize(size)
+}
+
+func (r *imageViewerRenderer) MinSize() fyne.Size {
+	return r.scroller.MinSize()
+}
+
+func (r *imageViewerRenderer) Objects() []fyne.CanvasObject {
+	return r.objects
+}
+
+func (r *imageViewerRenderer) Refresh() {
+	r.img.Image = r.viewer.img
+	r.img.Refresh()
+	r.scroller.Refresh()
 }

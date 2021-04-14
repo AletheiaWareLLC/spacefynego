@@ -47,6 +47,8 @@ import (
 	"strings"
 )
 
+const preferenceDisableMinimumRegistrarWarning = "%s_disable_minimum_registrar_warning"
+
 type SpaceFyne struct {
 	bcfynego.BCFyne
 }
@@ -67,8 +69,26 @@ func NewSpaceFyne(a fyne.App, w fyne.Window, c *spaceclientgo.SpaceClient) *Spac
 		}); err != nil {
 			log.Println(err)
 		}
-		if count < spacego.GetMinimumRegistrars() {
-			f.ShowRegistrarSelectionDialog(c, node)
+		if min := spacego.GetMinimumRegistrars(); count < min {
+			preference := fmt.Sprintf(preferenceDisableMinimumRegistrarWarning, node.Alias)
+			preferences := a.Preferences()
+			if !preferences.Bool(preference) {
+				disable := widget.NewCheck("Dont remind me again", func(checked bool) {
+					preferences.SetBool(preference, checked)
+				})
+
+				dialog.ShowCustomConfirm("Registrars", "Next", "Cancel",
+					container.NewVBox(
+						widget.NewLabel(fmt.Sprintf("Your data is currently stored on %d registrar(s), we recommend choosing at least %d registrars to store your backups and ensure your data's resilience.", count, min)),
+						disable,
+					),
+					func(result bool) {
+						if result {
+							f.ShowRegistrarSelectionDialog(c, node)
+						}
+					},
+					f.Window)
+			}
 		}
 	}
 	f.OnSignedUp = func(node *bcgo.Node) {

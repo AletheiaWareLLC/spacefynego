@@ -4,8 +4,8 @@ import (
 	"aletheiaware.com/spacefynego/storage"
 	"aletheiaware.com/spacego"
 	"encoding/base64"
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 const (

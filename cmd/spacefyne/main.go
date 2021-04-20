@@ -60,9 +60,9 @@ func main() {
 		go f.ShowFile(c, id, timestamp, meta)
 	})
 
-	refreshListWithNode := func(n *bcgo.Node) {
+	refreshListWithNode := func(n bcgo.Node) {
 		// Show progress dialog
-		progress := dialog.NewProgressInfinite("Refreshing", "Refreshing File List", f.Window)
+		progress := dialog.NewProgressInfinite("Refreshing", "Refreshing File List", f.Window())
 		progress.Show()
 		defer progress.Hide()
 
@@ -70,7 +70,7 @@ func main() {
 	}
 
 	refreshList := func() {
-		n, err := f.GetNode(&c.BCClient)
+		n, err := f.Node(c)
 		if err != nil {
 			f.ShowError(err)
 			return
@@ -81,16 +81,12 @@ func main() {
 	// Populate list in goroutine
 	go refreshList()
 
-	onSignedIn := f.OnSignedIn
-	f.OnSignedIn = func(node *bcgo.Node) {
-		if onSignedIn != nil {
-			onSignedIn(node)
-		}
+	f.AddOnSignedIn(func(node bcgo.Node) {
 		go refreshListWithNode(node)
-	}
-	f.OnSignedOut = func() {
+	})
+	f.AddOnSignedOut(func() {
 		go l.Clear()
-	}
+	})
 
 	// Create a toolbar of common operations
 	t := widget.NewToolbar(
@@ -108,7 +104,7 @@ func main() {
 			go f.ShowStorage(c)
 		}),
 		widget.NewToolbarAction(theme.NewThemedResource(bcuidata.AccountIcon), func() {
-			go f.ShowAccount(&c.BCClient)
+			go f.ShowAccount(c)
 		}),
 		widget.NewToolbarAction(theme.HelpIcon(), func() {
 			go f.ShowHelp(c)

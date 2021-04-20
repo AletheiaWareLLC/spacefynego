@@ -19,6 +19,7 @@ package storage
 import (
 	"aletheiaware.com/spacego"
 	"encoding/base64"
+	"fmt"
 	"fyne.io/fyne/v2"
 )
 
@@ -28,6 +29,7 @@ const (
 )
 
 type SpaceURI interface {
+	fmt.Stringer
 	fyne.URI
 	FileHash() []byte
 }

@@ -21,6 +21,7 @@ import (
 	bcstorage "aletheiaware.com/bcfynego/storage"
 	bcui "aletheiaware.com/bcfynego/ui"
 	"aletheiaware.com/bcgo"
+	"aletheiaware.com/bcgo/network"
 	"aletheiaware.com/financego"
 	"aletheiaware.com/spaceclientgo"
 	"aletheiaware.com/spacefynego/storage"
@@ -44,33 +45,52 @@ import (
 	"io/ioutil"
 	"log"
 	"net/url"
+	"reflect"
 	"strings"
 )
 
 const preferenceDisableMinimumRegistrarWarning = "%s_disable_minimum_registrar_warning"
 
-type SpaceFyne struct {
+type SpaceFyne interface {
+	bcfynego.BCFyne
+
+	Add(spaceclientgo.SpaceClient)
+	SearchFile(spaceclientgo.SpaceClient)
+	ShowComposeTextDialog(spaceclientgo.SpaceClient, bcgo.Node)
+	ShowFile(spaceclientgo.SpaceClient, string, uint64, *spacego.Meta)
+	ShowHelp(spaceclientgo.SpaceClient)
+	ShowRegistrarDialog(spaceclientgo.SpaceClient, bcgo.Node) func(string, uint64, *spacego.Registrar, *financego.Registration, *financego.Subscription)
+	ShowRegistrarSelectionDialog(spaceclientgo.SpaceClient, bcgo.Node)
+	ShowStorage(spaceclientgo.SpaceClient)
+	ShowUploadFileDialog(spaceclientgo.SpaceClient, bcgo.Node)
+	ShowUploadFolderDialog(spaceclientgo.SpaceClient, bcgo.Node)
+	ShowWelcome(spaceclientgo.SpaceClient, bcgo.Node)
+	UploadFile(spaceclientgo.SpaceClient, bcgo.Node, string, string, io.Reader)
+	UploadFolder(spaceclientgo.SpaceClient, bcgo.Node, fyne.ListableURI)
+}
+
+type spaceFyne struct {
 	bcfynego.BCFyne
 }
 
-func NewSpaceFyne(a fyne.App, w fyne.Window, c *spaceclientgo.SpaceClient) *SpaceFyne {
-	f := &SpaceFyne{
-		BCFyne: *bcfynego.NewBCFyne(a, w),
+func NewSpaceFyne(a fyne.App, w fyne.Window, c spaceclientgo.SpaceClient) SpaceFyne {
+	f := &spaceFyne{
+		BCFyne: bcfynego.NewBCFyne(a, w),
 	}
-	f.OnSignedIn = func(node *bcgo.Node) {
+	f.AddOnSignedIn(func(node bcgo.Node) {
 		// Create BC Repository
-		bcstorage.NewBCRepository(&c.BCClient).Register()
+		bcstorage.NewBCRepository(c).Register()
 		// Create Space Repository
 		storage.NewSpaceRepository(c, node).Register()
 		count := 0
-		if err := spacego.GetAllSubscriptionsForNode(node, func(*bcgo.BlockEntry, *financego.Subscription) error {
+		if err := spacego.AllSubscriptionsForNode(node, func(*bcgo.BlockEntry, *financego.Subscription) error {
 			count++
 			return nil
 		}); err != nil {
 			log.Println(err)
 		}
-		if min := spacego.GetMinimumRegistrars(); count < min {
-			preference := fmt.Sprintf(preferenceDisableMinimumRegistrarWarning, node.Alias)
+		if min := spacego.MinimumRegistrars(); count < min {
+			preference := fmt.Sprintf(preferenceDisableMinimumRegistrarWarning, node.Account().Alias())
 			preferences := a.Preferences()
 			if !preferences.Bool(preference) {
 				disable := widget.NewCheck("Dont remind me again", func(checked bool) {
@@ -87,33 +107,33 @@ func NewSpaceFyne(a fyne.App, w fyne.Window, c *spaceclientgo.SpaceClient) *Spac
 							f.ShowRegistrarSelectionDialog(c, node)
 						}
 					},
-					f.Window)
+					f.Window())
 			}
 		}
-	}
-	f.OnSignedUp = func(node *bcgo.Node) {
+	})
+	f.AddOnSignedUp(func(node bcgo.Node) {
 		f.ShowWelcome(c, node)
-	}
+	})
 	return f
 }
 
 // ShowWelcome displays a wizard to welcome a new user and walk them through the setup process.
-func (f *SpaceFyne) ShowWelcome(client *spaceclientgo.SpaceClient, node *bcgo.Node) {
+func (f spaceFyne) ShowWelcome(client spaceclientgo.SpaceClient, node bcgo.Node) {
 	dialog := dialog.NewCustomConfirm("Welcome", "Next", "Cancel",
-		widget.NewLabel(fmt.Sprintf("Hello %s, Welcome to S P A C E!", node.Alias)),
+		widget.NewLabel(fmt.Sprintf("Hello %s, Welcome to S P A C E!", node.Account().Alias())),
 		func(result bool) {
 			if result {
 				f.ShowRegistrarSelectionDialog(client, node)
 			}
 		},
-		f.Window)
+		f.Window())
 	dialog.Show()
 	dialog.Resize(bcui.DialogSize)
 }
 
-func (f *SpaceFyne) ShowRegistrarSelectionDialog(client *spaceclientgo.SpaceClient, node *bcgo.Node) {
+func (f spaceFyne) ShowRegistrarSelectionDialog(client spaceclientgo.SpaceClient, node bcgo.Node) {
 	// Show progress dialog
-	progress := dialog.NewProgressInfinite("Updating", "Getting Registrars", f.Window)
+	progress := dialog.NewProgressInfinite("Updating", "Getting Registrars", f.Window())
 	progress.Show()
 
 	list := ui.NewRegistrarList(f.ShowRegistrarDialog(client, node))
@@ -132,7 +152,7 @@ func (f *SpaceFyne) ShowRegistrarSelectionDialog(client *spaceclientgo.SpaceClie
 	dialog := dialog.NewCustom("Registrars", "Done",
 		container.NewBorder(
 			&widget.Label{
-				Text:     fmt.Sprintf("Your encrypted data will be stored by your choice of storage providers.\nWe recommend choosing at least %d registrars from the list below - the more you choose, the more resilient your data will be against the unexpected.", spacego.GetMinimumRegistrars()),
+				Text:     fmt.Sprintf("Your encrypted data will be stored by your choice of storage providers.\nWe recommend choosing at least %d registrars from the list below - the more you choose, the more resilient your data will be against the unexpected.", spacego.MinimumRegistrars()),
 				Wrapping: fyne.TextWrapWord,
 			},
 			nil,
@@ -140,30 +160,30 @@ func (f *SpaceFyne) ShowRegistrarSelectionDialog(client *spaceclientgo.SpaceClie
 			nil,
 			list,
 		),
-		f.Window)
+		f.Window())
 	dialog.Show()
 	dialog.Resize(bcui.DialogSize)
 }
 
-func (f *SpaceFyne) GetIcon() fyne.CanvasObject {
+func (f spaceFyne) GetIcon() fyne.CanvasObject {
 	icon := canvas.NewImageFromResource(data.SpaceIcon)
 	icon.FillMode = canvas.ImageFillContain
 	return icon
 }
 
 // Add displays a dialog (write text, take a picture, upload an existing file or folder), and adds the result.
-func (f *SpaceFyne) Add(client *spaceclientgo.SpaceClient) {
-	node, err := f.GetNode(&client.BCClient)
+func (f spaceFyne) Add(client spaceclientgo.SpaceClient) {
+	node, err := f.Node(client)
 	if err != nil {
 		f.ShowError(err)
 		return
 	}
 
 	// Show progress dialog
-	progress := dialog.NewProgressInfinite("Updating", "Getting Registrars", f.Window)
+	progress := dialog.NewProgressInfinite("Updating", "Getting Registrars", f.Window())
 	progress.Show()
 
-	domains, err := f.getRegistrarDomainsForNode(client, node)
+	domains, err := f.registrarDomainsForNode(client, node)
 	if err != nil {
 		log.Println(err)
 	}
@@ -176,7 +196,7 @@ func (f *SpaceFyne) Add(client *spaceclientgo.SpaceClient) {
 		return
 	}
 	content := container.NewAdaptiveGrid(3)
-	dialog := dialog.NewCustom("Add", "Cancel", content, f.Window)
+	dialog := dialog.NewCustom("Add", "Cancel", content, f.Window())
 	dialog.Show()
 
 	composeText := widget.NewButtonWithIcon("Text", theme.DocumentCreateIcon(), func() {
@@ -216,19 +236,19 @@ func (f *SpaceFyne) Add(client *spaceclientgo.SpaceClient) {
 	}
 }
 
-func (f *SpaceFyne) SearchFile(client *spaceclientgo.SpaceClient) {
+func (f spaceFyne) SearchFile(client spaceclientgo.SpaceClient) {
 	f.ShowError(fmt.Errorf("Not yet implemented: %s", "SpaceFyne.SearchFile"))
 }
 
-func (f *SpaceFyne) ShowFile(client *spaceclientgo.SpaceClient, id string, timestamp uint64, meta *spacego.Meta) {
-	node, err := f.GetNode(&client.BCClient)
+func (f spaceFyne) ShowFile(client spaceclientgo.SpaceClient, id string, timestamp uint64, meta *spacego.Meta) {
+	node, err := f.Node(client)
 	if err != nil {
 		f.ShowError(err)
 		return
 	}
 
 	// Show progress dialog
-	progress := dialog.NewProgressInfinite("Loading", "Reading "+meta.Name, f.Window)
+	progress := dialog.NewProgressInfinite("Loading", "Reading "+meta.Name, f.Window())
 	progress.Show()
 	// Hide progress dialog
 	defer progress.Hide()
@@ -239,7 +259,7 @@ func (f *SpaceFyne) ShowFile(client *spaceclientgo.SpaceClient, id string, times
 		return
 	}
 
-	view, err := viewer.ForMime(meta.GetType())
+	view, err := viewer.ForMime(meta.Type)
 	if err != nil {
 		f.ShowError(err)
 		return
@@ -266,22 +286,22 @@ func (f *SpaceFyne) ShowFile(client *spaceclientgo.SpaceClient, id string, times
 	if name == "" {
 		name = "(untitled)"
 	}
-	window := f.App.NewWindow(fmt.Sprintf("%s - %s - %s", bcgo.TimestampToString(timestamp), name, id[:8]))
+	window := f.App().NewWindow(fmt.Sprintf("%s - %s - %s", bcgo.TimestampToString(timestamp), name, id[:8]))
 	window.SetContent(view)
 	window.Resize(bcui.WindowSize)
 	window.CenterOnScreen()
 	window.Show()
 }
 
-func (f *SpaceFyne) ShowStorage(client *spaceclientgo.SpaceClient) {
-	node, err := f.GetNode(&client.BCClient)
+func (f spaceFyne) ShowStorage(client spaceclientgo.SpaceClient) {
+	node, err := f.Node(client)
 	if err != nil {
 		f.ShowError(err)
 		return
 	}
 
 	// Show progress dialog
-	progress := dialog.NewProgressInfinite("Updating", "Getting Registrars", f.Window)
+	progress := dialog.NewProgressInfinite("Updating", "Getting Registrars", f.Window())
 	progress.Show()
 
 	list := ui.NewRegistrarList(f.ShowRegistrarDialog(client, node))
@@ -298,12 +318,13 @@ func (f *SpaceFyne) ShowStorage(client *spaceclientgo.SpaceClient) {
 	}
 
 	// Show registrar list
-	dialog := dialog.NewCustom("Registrars", "OK", list, f.Window)
+	dialog := dialog.NewCustom("Registrars", "OK", list, f.Window())
 	dialog.Show()
 	dialog.Resize(bcui.DialogSize)
 }
 
-func (f *SpaceFyne) ShowRegistrarDialog(client *spaceclientgo.SpaceClient, node *bcgo.Node) func(id string, timestamp uint64, registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription) {
+func (f spaceFyne) ShowRegistrarDialog(client spaceclientgo.SpaceClient, node bcgo.Node) func(id string, timestamp uint64, registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription) {
+	alias := node.Account().Alias()
 	return func(id string, timestamp uint64, registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription) {
 		form := widget.NewForm(
 			widget.NewFormItem("Domain", &widget.Label{
@@ -332,10 +353,10 @@ func (f *SpaceFyne) ShowRegistrarDialog(client *spaceclientgo.SpaceClient, node 
 					return
 				}
 				params := url.Values{}
-				params.Add("alias", node.Alias)
+				params.Add("alias", alias)
 				params.Add("next", registrar.Service.SubscribeUrl)
 				u.RawQuery = params.Encode()
-				if err := f.App.OpenURL(u); err != nil {
+				if err := f.App().OpenURL(u); err != nil {
 					f.ShowError(err)
 					return
 				}
@@ -362,10 +383,10 @@ func (f *SpaceFyne) ShowRegistrarDialog(client *spaceclientgo.SpaceClient, node 
 					return
 				}
 				params := url.Values{}
-				params.Add("alias", node.Alias)
+				params.Add("alias", alias)
 				params.Add("customerId", registration.CustomerId)
 				u.RawQuery = params.Encode()
-				if err := f.App.OpenURL(u); err != nil {
+				if err := f.App().OpenURL(u); err != nil {
 					f.ShowError(err)
 					return
 				}
@@ -373,18 +394,18 @@ func (f *SpaceFyne) ShowRegistrarDialog(client *spaceclientgo.SpaceClient, node 
 		}
 
 		// Show detailed information
-		info := dialog.NewCustom(registrar.Merchant.Alias, "OK", form, f.Window)
+		info := dialog.NewCustom(registrar.Merchant.Alias, "OK", form, f.Window())
 		info.Show()
 		info.Resize(bcui.DialogSize)
 	}
 }
 
-func (f *SpaceFyne) ShowHelp(client *spaceclientgo.SpaceClient) {
+func (f spaceFyne) ShowHelp(client spaceclientgo.SpaceClient) {
 	f.ShowError(fmt.Errorf("Not yet implemented: %s", "SpaceFyne.ShowHelp"))
 }
 
 // ShowComposeTextDialog displays a dialog for creating a note, and adds the resulting file.
-func (f *SpaceFyne) ShowComposeTextDialog(client *spaceclientgo.SpaceClient, node *bcgo.Node) {
+func (f spaceFyne) ShowComposeTextDialog(client spaceclientgo.SpaceClient, node bcgo.Node) {
 	title := widget.NewEntry()
 	title.Validator = func(s string) error {
 		if s == "" {
@@ -404,7 +425,7 @@ func (f *SpaceFyne) ShowComposeTextDialog(client *spaceclientgo.SpaceClient, nod
 		name := title.Text
 
 		// Show progress dialog
-		progress := dialog.NewProgress("Uploading", "Uploading "+name, f.Window)
+		progress := dialog.NewProgress("Uploading", "Uploading "+name, f.Window())
 		progress.Show()
 		listener := &bcui.ProgressMiningListener{Func: progress.SetValue}
 
@@ -418,13 +439,13 @@ func (f *SpaceFyne) ShowComposeTextDialog(client *spaceclientgo.SpaceClient, nod
 			return
 		}
 		log.Println("Uploaded:", reference)
-	}, f.Window)
+	}, f.Window())
 	dialog.Show()
 	dialog.Resize(bcui.DialogSize)
 }
 
 // ShowUploadFileDialog displays a file picker, and adds the resulting file.
-func (f *SpaceFyne) ShowUploadFileDialog(client *spaceclientgo.SpaceClient, node *bcgo.Node) {
+func (f spaceFyne) ShowUploadFileDialog(client spaceclientgo.SpaceClient, node bcgo.Node) {
 	dialog := dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
 		if err != nil {
 			f.ShowError(err)
@@ -438,7 +459,7 @@ func (f *SpaceFyne) ShowUploadFileDialog(client *spaceclientgo.SpaceClient, node
 		uri := reader.URI()
 		name := widget.NewEntry()
 		name.SetText(uri.Name())
-		mime := widget.NewSelect(spacego.GetMimeTypes(), nil)
+		mime := widget.NewSelect(spacego.MimeTypes(), nil)
 		mime.Selected = uri.MimeType()
 		size := widget.NewLabel("0bytes")
 		prop := canvas.NewRectangle(color.Transparent)
@@ -483,16 +504,16 @@ func (f *SpaceFyne) ShowUploadFileDialog(client *spaceclientgo.SpaceClient, node
 			if result {
 				f.UploadFile(client, node, name.Text, mime.Selected, bytes.NewReader(buffer))
 			}
-		}, f.Window)
+		}, f.Window())
 		dialog.Show()
 		dialog.Resize(bcui.DialogSize)
-	}, f.Window)
+	}, f.Window())
 	dialog.Show()
 	dialog.Resize(bcui.DialogSize)
 }
 
 // ShowUploadFolderDialog displays a folder picker, and adds the resulting folder.
-func (f *SpaceFyne) ShowUploadFolderDialog(client *spaceclientgo.SpaceClient, node *bcgo.Node) {
+func (f spaceFyne) ShowUploadFolderDialog(client spaceclientgo.SpaceClient, node bcgo.Node) {
 	dialog := dialog.NewFolderOpen(func(lister fyne.ListableURI, err error) {
 		if err != nil {
 			f.ShowError(err)
@@ -502,14 +523,14 @@ func (f *SpaceFyne) ShowUploadFolderDialog(client *spaceclientgo.SpaceClient, no
 			return
 		}
 		f.UploadFolder(client, node, lister)
-	}, f.Window)
+	}, f.Window())
 	dialog.Show()
 	dialog.Resize(bcui.DialogSize)
 }
 
-func (f *SpaceFyne) UploadFile(client *spaceclientgo.SpaceClient, node *bcgo.Node, name, mime string, reader io.Reader) {
+func (f spaceFyne) UploadFile(client spaceclientgo.SpaceClient, node bcgo.Node, name, mime string, reader io.Reader) {
 	// Show progress dialog
-	progress := dialog.NewProgress("Uploading", "Uploading "+name, f.Window)
+	progress := dialog.NewProgress("Uploading", "Uploading "+name, f.Window())
 	progress.Show()
 	listener := &bcui.ProgressMiningListener{Func: progress.SetValue}
 
@@ -525,7 +546,7 @@ func (f *SpaceFyne) UploadFile(client *spaceclientgo.SpaceClient, node *bcgo.Nod
 	log.Println("Uploaded:", reference)
 }
 
-func (f *SpaceFyne) UploadFolder(client *spaceclientgo.SpaceClient, node *bcgo.Node, folder fyne.ListableURI) {
+func (f spaceFyne) UploadFolder(client spaceclientgo.SpaceClient, node bcgo.Node, folder fyne.ListableURI) {
 	uris, err := folder.List()
 	if err != nil {
 		f.ShowError(err)
@@ -536,7 +557,7 @@ func (f *SpaceFyne) UploadFolder(client *spaceclientgo.SpaceClient, node *bcgo.N
 	// TODO show confirmation dialog which lists the files to be uploaded so the user can select/deselect
 
 	// Show progress dialog
-	progress := dialog.NewProgress("Uploading", "Uploading "+folder.Name(), f.Window)
+	progress := dialog.NewProgress("Uploading", "Uploading "+folder.Name(), f.Window())
 	progress.Show()
 	// Hide progress dialog
 	defer progress.Hide()
@@ -565,21 +586,21 @@ func (f *SpaceFyne) UploadFolder(client *spaceclientgo.SpaceClient, node *bcgo.N
 	}
 }
 
-func (f *SpaceFyne) getRegistrarDomainsForNode(client *spaceclientgo.SpaceClient, node *bcgo.Node) (domains []string, err error) {
-	var net *bcgo.TCPNetwork
-	if node.Network != nil {
-		if n, ok := node.Network.(*bcgo.TCPNetwork); ok {
-			net = n
+func (f spaceFyne) registrarDomainsForNode(client spaceclientgo.SpaceClient, node bcgo.Node) (domains []string, err error) {
+	var tcp *network.TCP
+	if n := node.Network(); n != nil && !reflect.ValueOf(n).IsNil() {
+		if t, ok := n.(*network.TCP); ok {
+			tcp = t
 		}
 	}
-	err = spacego.GetAllRegistrarsForNode(node, func(registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription) error {
+	err = spacego.AllRegistrarsForNode(node, func(registrar *spacego.Registrar, registration *financego.Registration, subscription *financego.Subscription) error {
 		if registrar != nil && registration != nil && subscription != nil {
 			domain := registrar.Merchant.Domain
 			if domain == "" {
 				domain = registrar.Merchant.Alias
 			}
-			if net != nil {
-				net.AddPeer(domain)
+			if tcp != nil {
+				tcp.AddPeer(domain)
 			}
 			domains = append(domains, domain)
 		}

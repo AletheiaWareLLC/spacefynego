@@ -133,14 +133,14 @@ func (l *RegistrarList) AddSubscription(entry *bcgo.BlockEntry, subscription *fi
 	return nil
 }
 
-func (l *RegistrarList) Update(client *spaceclientgo.SpaceClient, node *bcgo.Node) error {
-	if err := spacego.GetAllRegistrars(node, l.AddRegistrar); err != nil {
+func (l *RegistrarList) Update(client spaceclientgo.SpaceClient, node bcgo.Node) error {
+	if err := spacego.AllRegistrars(node, l.AddRegistrar); err != nil {
 		return err
 	}
-	if err := spacego.GetAllRegistrationsForNode(node, l.AddRegistration); err != nil {
+	if err := spacego.AllRegistrationsForNode(node, l.AddRegistration); err != nil {
 		return err
 	}
-	if err := spacego.GetAllSubscriptionsForNode(node, l.AddSubscription); err != nil {
+	if err := spacego.AllSubscriptionsForNode(node, l.AddSubscription); err != nil {
 		return err
 	}
 	sort.Slice(l.ids, func(i, j int) bool {

@@ -41,19 +41,19 @@ type SpaceRepository interface {
 	Register()
 }
 
-type spacerepo struct {
-	client *spaceclientgo.SpaceClient
-	node   *bcgo.Node
+type spaceRepository struct {
+	client spaceclientgo.SpaceClient
+	node   bcgo.Node
 }
 
-func NewSpaceRepository(client *spaceclientgo.SpaceClient, node *bcgo.Node) SpaceRepository {
-	return &spacerepo{
+func NewSpaceRepository(client spaceclientgo.SpaceClient, node bcgo.Node) SpaceRepository {
+	return &spaceRepository{
 		client: client,
 		node:   node,
 	}
 }
 
-func (r *spacerepo) CanList(u fyne.URI) (bool, error) {
+func (r *spaceRepository) CanList(u fyne.URI) (bool, error) {
 	if u == RootURI {
 		return true, nil
 	}
@@ -61,7 +61,7 @@ func (r *spacerepo) CanList(u fyne.URI) (bool, error) {
 	return false, fmt.Errorf("%s: Not Yet Implemented", "SpaceRepository.CanList")
 }
 
-func (r *spacerepo) CanRead(u fyne.URI) (bool, error) {
+func (r *spaceRepository) CanRead(u fyne.URI) (bool, error) {
 	if u == RootURI {
 		return false, nil
 	}
@@ -69,7 +69,7 @@ func (r *spacerepo) CanRead(u fyne.URI) (bool, error) {
 	return false, fmt.Errorf("%s: Not Yet Implemented", "SpaceRepository.CanRead")
 }
 
-func (r *spacerepo) CanWrite(u fyne.URI) (bool, error) {
+func (r *spaceRepository) CanWrite(u fyne.URI) (bool, error) {
 	if u == RootURI {
 		return false, nil
 	}
@@ -77,7 +77,7 @@ func (r *spacerepo) CanWrite(u fyne.URI) (bool, error) {
 	return false, fmt.Errorf("%s: Not Yet Implemented", "SpaceRepository.CanWrite")
 }
 
-func (r *spacerepo) Child(u fyne.URI, c string) (fyne.URI, error) {
+func (r *spaceRepository) Child(u fyne.URI, c string) (fyne.URI, error) {
 	if u == RootURI {
 		return r.ParseURI(SPACE_SCHEME_PREFIX + c)
 	}
@@ -85,46 +85,46 @@ func (r *spacerepo) Child(u fyne.URI, c string) (fyne.URI, error) {
 	return nil, fmt.Errorf("%s: Not Yet Implemented", "SpaceRepository.Child")
 }
 
-func (r *spacerepo) Copy(src, dest fyne.URI) error {
+func (r *spaceRepository) Copy(src, dest fyne.URI) error {
 	// TODO
 	return fmt.Errorf("%s: Not Yet Implemented", "SpaceRepository.Copy")
 }
 
-func (r *spacerepo) CreateListable(u fyne.URI) error {
+func (r *spaceRepository) CreateListable(u fyne.URI) error {
 	// TODO
 	return fmt.Errorf("%s: Not Yet Implemented", "SpaceRepository.CreateListable")
 }
 
-func (r *spacerepo) Delete(u fyne.URI) error {
+func (r *spaceRepository) Delete(u fyne.URI) error {
 	// BC is indelible
 	return repository.ErrOperationNotSupported
 }
 
-func (r *spacerepo) Destroy(string) {
+func (r *spaceRepository) Destroy(string) {
 	// Do nothing
 }
 
-func (r *spacerepo) Exists(u fyne.URI) (bool, error) {
+func (r *spaceRepository) Exists(u fyne.URI) (bool, error) {
 	// TODO
 	return false, fmt.Errorf("%s: Not Yet Implemented", "SpaceRepository.Exists")
 }
 
-func (r *spacerepo) List(u fyne.URI) ([]fyne.URI, error) {
+func (r *spaceRepository) List(u fyne.URI) ([]fyne.URI, error) {
 	// TODO
 	return nil, fmt.Errorf("%s: Not Yet Implemented", "SpaceRepository.List")
 }
 
-func (r *spacerepo) Move(fyne.URI, fyne.URI) error {
+func (r *spaceRepository) Move(fyne.URI, fyne.URI) error {
 	// BC is immutable
 	return repository.ErrOperationNotSupported
 }
 
-func (r *spacerepo) Parent(fyne.URI) (fyne.URI, error) {
+func (r *spaceRepository) Parent(fyne.URI) (fyne.URI, error) {
 	// TODO
 	return nil, fmt.Errorf("%s: Not Yet Implemented", "SpaceRepository.Parent")
 }
 
-func (r *spacerepo) ParseURI(s string) (fyne.URI, error) {
+func (r *spaceRepository) ParseURI(s string) (fyne.URI, error) {
 	if !strings.HasPrefix(s, SPACE_SCHEME_PREFIX) {
 		return nil, storage.ErrInvalidURI
 	}
@@ -138,12 +138,24 @@ func (r *spacerepo) ParseURI(s string) (fyne.URI, error) {
 	parts := strings.Split(s, "/")
 
 	var fileHash []byte
-	if len(parts) > 1 {
-		h, err := base64.RawURLEncoding.DecodeString(parts[1])
-		if err != nil {
+	h, err := base64.RawURLEncoding.DecodeString(parts[0])
+	if err != nil {
+		return nil, err
+	}
+	fileHash = h
+
+	if len(parts) == 1 {
+		var meta *spacego.Meta
+		if err := r.client.MetaForHash(r.node, fileHash, func(e *bcgo.BlockEntry, m *spacego.Meta) error {
+			meta = m
+			return nil
+		}); err != nil {
 			return nil, err
 		}
-		fileHash = h
+		if meta == nil {
+			return nil, fmt.Errorf("Could not load metadata for %s", s)
+		}
+		return NewFileURI(fileHash, meta), nil
 	}
 
 	var recordHash []byte
@@ -155,22 +167,9 @@ func (r *spacerepo) ParseURI(s string) (fyne.URI, error) {
 		recordHash = h
 	}
 
-	switch parts[0] {
+	switch parts[1] {
 	case "delta":
 		return NewDeltaURI(fileHash, recordHash), nil
-	case "file":
-		node, err := r.client.GetNode()
-		if err != nil {
-			return nil, err
-		}
-		var meta *spacego.Meta
-		if err := r.client.GetMeta(node, fileHash, func(e *bcgo.BlockEntry, m *spacego.Meta) error {
-			meta = m
-			return nil
-		}); err != nil {
-			return nil, err
-		}
-		return NewFileURI(fileHash, meta), nil
 	case "meta":
 		return NewMetaURI(fileHash), nil
 	case "preview":
@@ -181,16 +180,16 @@ func (r *spacerepo) ParseURI(s string) (fyne.URI, error) {
 	return nil, storage.ErrInvalidURI
 }
 
-func (r *spacerepo) Reader(u fyne.URI) (fyne.URIReadCloser, error) {
+func (r *spaceRepository) Reader(u fyne.URI) (fyne.URIReadCloser, error) {
 	// TODO
 	return nil, fmt.Errorf("%s: Not Yet Implemented", "SpaceRepository.Reader")
 }
 
-func (r *spacerepo) Register() {
+func (r *spaceRepository) Register() {
 	repository.Register(SPACE_SCHEME, r)
 }
 
-func (r *spacerepo) Writer(u fyne.URI) (fyne.URIWriteCloser, error) {
+func (r *spaceRepository) Writer(u fyne.URI) (fyne.URIWriteCloser, error) {
 	// TODO
 	return nil, fmt.Errorf("%s: Not Yet Implemented", "SpaceRepository.Writer")
 }

@@ -21,6 +21,6 @@ set -x
 go fmt $GOPATH/src/aletheiaware.com/{spacefynego,spacefynego/...}
 go vet $GOPATH/src/aletheiaware.com/{spacefynego,spacefynego/...}
 go test $GOPATH/src/aletheiaware.com/{spacefynego,spacefynego/...}
-(cd $GOPATH/src/aletheiaware.com/spacefynego/cmd/spacefyne && fyne release -os android -appID com.aletheiaware.space -appBuild 1 -appVersion 1.2.0 -keyStore=$GOPATH/src/aletheiaware.com/spacefynego/private/SPACE.keystore -name SPACE)
+(cd $GOPATH/src/aletheiaware.com/spacefynego/cmd/spacefyne && fyne release -os android -appID com.aletheiaware.space -appBuild 1 -appVersion 1.2.1 -keyStore=$GOPATH/src/aletheiaware.com/spacefynego/private/SPACE.keystore -name SPACE)
 (cd $GOPATH/src/aletheiaware.com/spacefynego/cmd/spacefyne && adb install -r -g SPACE.apk)
 (cd $GOPATH/src/aletheiaware.com/spacefynego/cmd/spacefyne && adb logcat -c && adb logcat | tee android.log)

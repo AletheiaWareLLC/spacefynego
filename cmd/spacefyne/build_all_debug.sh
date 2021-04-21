@@ -22,10 +22,10 @@ go fmt $GOPATH/src/aletheiaware.com/spacefynego/...
 go vet $GOPATH/src/aletheiaware.com/spacefynego/...
 go test $GOPATH/src/aletheiaware.com/spacefynego/...
 mkdir -p fyne-cross/logs
-(fyne-cross android -app-id com.aletheiaware.space -debug -output SPACE_unaligned ./cmd/spacefyne/ >./fyne-cross/logs/android 2>&1 && cd $GOPATH/src/aletheiaware.com/spacefynego/fyne-cross/dist/android && ${ANDROID_HOME}/build-tools/28.0.3/zipalign -f 4 SPACE_unaligned.apk SPACE.apk) &
-fyne-cross darwin -app-id com.aletheiaware.space -debug -output SPACE ./cmd/spacefyne/ >./fyne-cross/logs/darwin 2>&1 &
-fyne-cross linux -app-id com.aletheiaware.space -debug -output space ./cmd/spacefyne/ >./fyne-cross/logs/linux 2>&1 &
-#fyne-cross windows -app-id com.aletheiaware.space -debug -output SPACE ./cmd/spacefyne/ >./fyne-cross/logs/windows 2>&1 &
+(fyne-cross android -app-id com.aletheiaware.space -debug -icon ./cmd/spacefyne/Icon.png -output SPACE_unaligned ./cmd/spacefyne/ >./fyne-cross/logs/android 2>&1 && cd $GOPATH/src/aletheiaware.com/spacefynego/fyne-cross/dist/android && ${ANDROID_HOME}/build-tools/28.0.3/zipalign -f 4 SPACE_unaligned.apk SPACE.apk) &
+fyne-cross darwin -app-id com.aletheiaware.space -debug -icon ./cmd/spacefyne/Icon.png -output SPACE ./cmd/spacefyne/ >./fyne-cross/logs/darwin 2>&1 &
+fyne-cross linux -app-id com.aletheiaware.space -debug -icon ./cmd/spacefyne/Icon.png -output space ./cmd/spacefyne/ >./fyne-cross/logs/linux 2>&1 &
+#fyne-cross windows -app-id com.aletheiaware.space -debug -icon ./cmd/spacefyne/Icon.png -output SPACE ./cmd/spacefyne/ >./fyne-cross/logs/windows 2>&1 &
 for job in `jobs -p`
 do
     wait $job

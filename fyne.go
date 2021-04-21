@@ -93,13 +93,17 @@ func NewSpaceFyne(a fyne.App, w fyne.Window, c spaceclientgo.SpaceClient) SpaceF
 			preference := fmt.Sprintf(preferenceDisableMinimumRegistrarWarning, node.Account().Alias())
 			preferences := a.Preferences()
 			if !preferences.Bool(preference) {
+				label := &widget.Label{
+					Text:     fmt.Sprintf("Your data is currently stored on %d registrar(s). We recommend choosing at least %d registrars to store your backups and ensure your data's resilience.", count, min),
+					Wrapping: fyne.TextWrapWord,
+				}
 				disable := widget.NewCheck("Dont remind me again", func(checked bool) {
 					preferences.SetBool(preference, checked)
 				})
 
-				dialog.ShowCustomConfirm("Registrars", "Next", "Cancel",
+				confirm := dialog.NewCustomConfirm("Registrars", "Next", "Cancel",
 					container.NewVBox(
-						widget.NewLabel(fmt.Sprintf("Your data is currently stored on %d registrar(s), we recommend choosing at least %d registrars to store your backups and ensure your data's resilience.", count, min)),
+						label,
 						disable,
 					),
 					func(result bool) {
@@ -108,6 +112,8 @@ func NewSpaceFyne(a fyne.App, w fyne.Window, c spaceclientgo.SpaceClient) SpaceF
 						}
 					},
 					f.Window())
+				confirm.Show()
+				confirm.Resize(bcui.DialogSize)
 			}
 		}
 	})

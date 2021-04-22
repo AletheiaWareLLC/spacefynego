@@ -101,11 +101,13 @@ func NewSpaceFyne(a fyne.App, w fyne.Window, c spaceclientgo.SpaceClient) SpaceF
 					preferences.SetBool(preference, checked)
 				})
 
-				confirm := dialog.NewCustomConfirm("Registrars", "Next", "Cancel",
-					container.NewVBox(
-						label,
-						disable,
-					),
+				contents := container.NewVBox()
+				if !bcgo.IsLive() {
+					contents.Add(bcui.NewTestModeSign())
+				}
+				contents.Add(label)
+				contents.Add(disable)
+				confirm := dialog.NewCustomConfirm("Registrars", "Next", "Cancel", contents,
 					func(result bool) {
 						if result {
 							f.ShowRegistrarSelectionDialog(c, node)
@@ -125,8 +127,13 @@ func NewSpaceFyne(a fyne.App, w fyne.Window, c spaceclientgo.SpaceClient) SpaceF
 
 // ShowWelcome displays a wizard to welcome a new user and walk them through the setup process.
 func (f spaceFyne) ShowWelcome(client spaceclientgo.SpaceClient, node bcgo.Node) {
+	contents := container.NewVBox()
+	if !bcgo.IsLive() {
+		contents.Add(bcui.NewTestModeSign())
+	}
+	contents.Add(widget.NewLabel(fmt.Sprintf("Hello %s, Welcome to S P A C E!", node.Account().Alias())))
 	dialog := dialog.NewCustomConfirm("Welcome", "Next", "Cancel",
-		widget.NewLabel(fmt.Sprintf("Hello %s, Welcome to S P A C E!", node.Account().Alias())),
+		contents,
 		func(result bool) {
 			if result {
 				f.ShowRegistrarSelectionDialog(client, node)
@@ -154,19 +161,22 @@ func (f spaceFyne) ShowRegistrarSelectionDialog(client spaceclientgo.SpaceClient
 		f.ShowError(fmt.Errorf("Error updating registrar list: %s", err))
 		return
 	}
+	contents := container.NewVBox()
+	if !bcgo.IsLive() {
+		contents.Add(bcui.NewTestModeSign())
+	}
+	contents.Add(container.NewBorder(
+		&widget.Label{
+			Text:     fmt.Sprintf("Your encrypted data will be stored by your choice of storage providers.\nWe recommend choosing at least %d registrars from the list below - the more you choose, the more resilient your data will be against the unexpected.", spacego.MinimumRegistrars()),
+			Wrapping: fyne.TextWrapWord,
+		},
+		nil,
+		nil,
+		nil,
+		list,
+	))
 
-	dialog := dialog.NewCustom("Registrars", "Done",
-		container.NewBorder(
-			&widget.Label{
-				Text:     fmt.Sprintf("Your encrypted data will be stored by your choice of storage providers.\nWe recommend choosing at least %d registrars from the list below - the more you choose, the more resilient your data will be against the unexpected.", spacego.MinimumRegistrars()),
-				Wrapping: fyne.TextWrapWord,
-			},
-			nil,
-			nil,
-			nil,
-			list,
-		),
-		f.Window())
+	dialog := dialog.NewCustom("Registrars", "Done", contents, f.Window())
 	dialog.Show()
 	dialog.Resize(bcui.DialogSize)
 }
@@ -323,8 +333,14 @@ func (f spaceFyne) ShowStorage(client spaceclientgo.SpaceClient) {
 		return
 	}
 
+	contents := container.NewVBox()
+	if !bcgo.IsLive() {
+		contents.Add(bcui.NewTestModeSign())
+	}
+	contents.Add(list)
+
 	// Show registrar list
-	dialog := dialog.NewCustom("Registrars", "OK", list, f.Window())
+	dialog := dialog.NewCustom("Registrars", "OK", contents, f.Window())
 	dialog.Show()
 	dialog.Resize(bcui.DialogSize)
 }
@@ -398,9 +414,14 @@ func (f spaceFyne) ShowRegistrarDialog(client spaceclientgo.SpaceClient, node bc
 				}
 			}))
 		}
+		contents := container.NewVBox()
+		if !bcgo.IsLive() {
+			contents.Add(bcui.NewTestModeSign())
+		}
+		contents.Add(form)
 
 		// Show detailed information
-		info := dialog.NewCustom(registrar.Merchant.Alias, "OK", form, f.Window())
+		info := dialog.NewCustom(registrar.Merchant.Alias, "OK", contents, f.Window())
 		info.Show()
 		info.Resize(bcui.DialogSize)
 	}

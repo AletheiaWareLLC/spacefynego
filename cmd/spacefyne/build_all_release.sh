@@ -21,8 +21,8 @@ set -x
 go fmt $GOPATH/src/aletheiaware.com/spacefynego/...
 go vet $GOPATH/src/aletheiaware.com/spacefynego/...
 go test $GOPATH/src/aletheiaware.com/spacefynego/...
-fyne-cross android -app-id com.aletheiaware.space -app-version 1.2.2 -icon ./cmd/spacefyne/Icon.png -keystore=/app/private/SPACE.keystore -output SPACE -release ./cmd/spacefyne/
-fyne-cross darwin -app-id com.aletheiaware.space -app-version 1.2.2 -category utilities -icon ./cmd/spacefyne/Icon.png -output SPACE -release ./cmd/spacefyne/
-fyne-cross ios -app-id com.aletheiaware.space -app-version 1.2.2 -icon ./cmd/spacefyne/Icon.png -output SPACE -release ./cmd/spacefyne/
-fyne-cross linux -app-id com.aletheiaware.space -app-version 1.2.2 -icon ./cmd/spacefyne/Icon.png -output space -release ./cmd/spacefyne/
-fyne-cross windows -app-id com.aletheiaware.space -app-version 1.2.2 -icon ./cmd/spacefyne/Icon.png -output space -release ./cmd/spacefyne/
+fyne-cross android -app-id com.aletheiaware.space -app-version 1.2.3 -icon ./cmd/spacefyne/Icon.png -keystore=/app/private/SPACE.keystore -output SPACE -release ./cmd/spacefyne/
+fyne-cross darwin -app-id com.aletheiaware.space -app-version 1.2.3 -category utilities -icon ./cmd/spacefyne/Icon.png -output SPACE -release ./cmd/spacefyne/
+fyne-cross ios -app-id com.aletheiaware.space -app-version 1.2.3 -icon ./cmd/spacefyne/Icon.png -output SPACE -release ./cmd/spacefyne/
+fyne-cross linux -app-id com.aletheiaware.space -app-version 1.2.3 -icon ./cmd/spacefyne/Icon.png -output space -release ./cmd/spacefyne/
+fyne-cross windows -app-id com.aletheiaware.space -app-version 1.2.3 -icon ./cmd/spacefyne/Icon.png -output space -release ./cmd/spacefyne/

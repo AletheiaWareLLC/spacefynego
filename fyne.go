@@ -77,7 +77,12 @@ func NewSpaceFyne(a fyne.App, w fyne.Window, c spaceclientgo.SpaceClient) SpaceF
 	f := &spaceFyne{
 		BCFyne: bcfynego.NewBCFyne(a, w),
 	}
-	f.AddOnSignedIn(func(node bcgo.Node) {
+	f.AddOnSignedIn(func(account bcgo.Account) {
+		node, err := f.Node(c)
+		if err != nil {
+			f.ShowError(err)
+			return
+		}
 		// Create BC Repository
 		bcstorage.NewBCRepository(c).Register()
 		// Create Space Repository
@@ -90,7 +95,7 @@ func NewSpaceFyne(a fyne.App, w fyne.Window, c spaceclientgo.SpaceClient) SpaceF
 			log.Println(err)
 		}
 		if min := spacego.MinimumRegistrars(); count < min {
-			preference := fmt.Sprintf(preferenceDisableMinimumRegistrarWarning, node.Account().Alias())
+			preference := fmt.Sprintf(preferenceDisableMinimumRegistrarWarning, account.Alias())
 			preferences := a.Preferences()
 			if !preferences.Bool(preference) {
 				label := &widget.Label{
@@ -119,7 +124,12 @@ func NewSpaceFyne(a fyne.App, w fyne.Window, c spaceclientgo.SpaceClient) SpaceF
 			}
 		}
 	})
-	f.AddOnSignedUp(func(node bcgo.Node) {
+	f.AddOnSignedUp(func(bcgo.Account) {
+		node, err := f.Node(c)
+		if err != nil {
+			f.ShowError(err)
+			return
+		}
 		f.ShowWelcome(c, node)
 	})
 	return f

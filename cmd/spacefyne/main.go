@@ -60,7 +60,12 @@ func main() {
 		go f.ShowFile(c, id, timestamp, meta)
 	})
 
-	refreshListWithNode := func(n bcgo.Node) {
+	refreshList := func() {
+		n, err := f.Node(c)
+		if err != nil {
+			f.ShowError(err)
+			return
+		}
 		// Show progress dialog
 		progress := dialog.NewProgressInfinite("Refreshing", "Refreshing File List", f.Window())
 		progress.Show()
@@ -69,20 +74,11 @@ func main() {
 		l.Update(c, n)
 	}
 
-	refreshList := func() {
-		n, err := f.Node(c)
-		if err != nil {
-			f.ShowError(err)
-			return
-		}
-		refreshListWithNode(n)
-	}
-
 	// Populate list in goroutine
 	go refreshList()
 
-	f.AddOnSignedIn(func(node bcgo.Node) {
-		go refreshListWithNode(node)
+	f.AddOnSignedIn(func(bcgo.Account) {
+		go refreshList()
 	})
 	f.AddOnSignedOut(func() {
 		go l.Clear()

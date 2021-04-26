@@ -74,15 +74,15 @@ func main() {
 		l.Update(c, n)
 	}
 
-	// Populate list in goroutine
-	go refreshList()
-
 	f.AddOnSignedIn(func(bcgo.Account) {
 		go refreshList()
 	})
 	f.AddOnSignedOut(func() {
 		go l.Clear()
 	})
+
+	// Trigger Access Flow
+	go f.Account(c)
 
 	// Create a toolbar of common operations
 	t := widget.NewToolbar(

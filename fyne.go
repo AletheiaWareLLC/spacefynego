@@ -30,6 +30,7 @@ import (
 	"aletheiaware.com/spacefynego/ui/viewer"
 	"aletheiaware.com/spacego"
 	"bytes"
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -295,8 +296,9 @@ func (f spaceFyne) ShowFile(client spaceclientgo.SpaceClient, id string, timesta
 		return
 	}
 
-	// Create goroutine to load file contents and update viewer
-	go func() {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	client.WatchFile(ctx, node, hash, func() {
 		reader, err := client.ReadFile(node, hash)
 		if err != nil {
 			f.ShowError(err)
@@ -306,7 +308,7 @@ func (f spaceFyne) ShowFile(client spaceclientgo.SpaceClient, id string, timesta
 			f.ShowError(err)
 			return
 		}
-	}()
+	})
 
 	name := meta.Name
 	if name == "" {
@@ -316,6 +318,7 @@ func (f spaceFyne) ShowFile(client spaceclientgo.SpaceClient, id string, timesta
 	window.SetContent(view)
 	window.Resize(bcui.WindowSize)
 	window.CenterOnScreen()
+	window.SetOnClosed(cancel)
 	window.Show()
 }
 
